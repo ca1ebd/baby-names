@@ -520,25 +520,16 @@ export default function BabyNameSwipe() {
                   {label || "—"}
                 </button>
               </div>
-              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+              <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
+                <button onClick={() => setView(view === "settings" ? "swipe" : "settings")} style={chip(view === "settings")} aria-label="Settings">
+                  ⚙
+                </button>
                 {[0, 1].map((k) => (
                   <button key={k} onClick={() => setWho(k)} style={chip(who === k)}>
                     {(state?.people?.[k]?.label || `P${k + 1}`).toUpperCase()}
                   </button>
                 ))}
               </div>
-            </div>
-
-            {/* filters */}
-            <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap", flexShrink: 0 }}>
-              <button onClick={() => setView(view === "settings" ? "swipe" : "settings")} style={chip(view === "settings")} aria-label="Settings">
-                ⚙
-              </button>
-              {view !== "settings" && (
-                <button onClick={() => setView(view === "swipe" ? "list" : "swipe")} style={{ ...chip(view === "list"), marginLeft: "auto" }}>
-                  {view === "swipe" ? `LIST · ${matches.length}` : "BACK"}
-                </button>
-              )}
             </div>
 
             {view === "settings" ? (
@@ -602,15 +593,6 @@ export default function BabyNameSwipe() {
                   <button onClick={undo} disabled={!history.length} style={{ ...round("transparent", "rgba(22,32,43,0.25)", 44), color: "rgba(22,32,43,0.5)", fontSize: 15, opacity: history.length ? 1 : 0.35, boxShadow: "none" }} aria-label="Undo">↺</button>
                   <button onClick={() => decide("like")} style={{ ...round(C.card, C.yes, 62), color: C.yes, fontSize: 24 }} aria-label="Keep">♥</button>
                 </div>
-
-                <div style={{ textAlign: "center", marginTop: 14, fontSize: 11, letterSpacing: "0.18em", opacity: 0.5, flexShrink: 0 }}>
-                  {remaining} LEFT · {keeps.length} KEPT · {matches.length} MATCHES
-                </div>
-                {status === "offline" && (
-                  <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.band, letterSpacing: "0.06em", flexShrink: 0 }}>
-                    Not saving. Open the list and copy a backup before you close this.
-                  </div>
-                )}
               </>
             ) : (
               <div style={{ flex: 1, minHeight: 0, minWidth: 0, overflowY: "auto", overflowX: "hidden", overscrollBehavior: "contain" }}>
@@ -654,6 +636,36 @@ export default function BabyNameSwipe() {
                   }}
                 />
               </div>
+            )}
+
+            {view !== "settings" && (
+              <>
+                {/* footer: stats + list/back toggle */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: view === "swipe" ? "space-between" : "flex-end",
+                    gap: 10,
+                    marginTop: 14,
+                    flexShrink: 0,
+                  }}
+                >
+                  {view === "swipe" && (
+                    <div style={{ fontSize: 11, letterSpacing: "0.14em", opacity: 0.5 }}>
+                      {remaining} LEFT · {keeps.length} KEPT · {matches.length} MATCHES
+                    </div>
+                  )}
+                  <button onClick={() => setView(view === "swipe" ? "list" : "swipe")} style={{ ...chip(view === "list"), flexShrink: 0 }}>
+                    {view === "swipe" ? `LIST · ${matches.length}` : "BACK"}
+                  </button>
+                </div>
+                {view === "swipe" && status === "offline" && (
+                  <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.band, letterSpacing: "0.06em", flexShrink: 0 }}>
+                    Not saving. Open the list and copy a backup before you close this.
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
