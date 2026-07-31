@@ -454,7 +454,6 @@ export default function BabyNameSwipe() {
   };
 
   const keeps = pool.filter((x) => picks[x.n] === "keep");
-  const remaining = Math.max(deck.length - i, 0);
   const visible = deck.slice(i, i + 3);
   const label = state?.people?.[who]?.label || "";
 
@@ -615,7 +614,6 @@ export default function BabyNameSwipe() {
                   matches={matches}
                   keeps={keeps}
                   label={label}
-                  lastName={state.lastName}
                   onCopy={() => {
                     const text = JSON.stringify(state);
                     try {
@@ -653,34 +651,31 @@ export default function BabyNameSwipe() {
               </div>
             )}
 
-            {/* footer: stats + settings/matches toggle */}
+            {/* footer: matches/back + settings */}
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: view === "swipe" ? "space-between" : "flex-end",
+                justifyContent: "flex-end",
                 gap: 10,
                 marginTop: 14,
                 flexShrink: 0,
               }}
             >
-              {view === "swipe" && (
-                <div style={{ fontSize: 11, letterSpacing: "0.14em", opacity: 0.5 }}>
-                  {remaining} LEFT · {keeps.length} KEPT · {matches.length} MATCHES
-                </div>
-              )}
-              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                <button onClick={() => setView("settings")} style={chip(false)} aria-label="Settings">
-                  ⚙
-                </button>
-                <button onClick={() => setView(view === "swipe" ? "list" : "swipe")} style={chip(view === "list")}>
-                  {view === "swipe" ? `MATCHES · ${matches.length}` : "BACK"}
-                </button>
-              </div>
+              <button onClick={() => setView(view === "swipe" ? "list" : "swipe")} style={chip(view === "list")}>
+                {view === "swipe" ? `MATCHES · ${matches.length}` : "BACK"}
+              </button>
+              <button
+                onClick={() => setView("settings")}
+                aria-label="Settings"
+                style={{ background: "none", border: "none", padding: "8px", color: C.ink, fontSize: 18, lineHeight: 1, cursor: "pointer", flexShrink: 0 }}
+              >
+                ⚙
+              </button>
             </div>
             {view === "swipe" && status === "offline" && (
               <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.band, letterSpacing: "0.06em", flexShrink: 0 }}>
-                Not saving. Open the list and copy a backup before you close this.
+                Not saving. Open Matches and copy a backup before you close this.
               </div>
             )}
           </>
@@ -781,12 +776,12 @@ function Empty({ text }) {
   );
 }
 
-function ListView({ matches, keeps, label, lastName, onReset, onCopy, onRestore }) {
+function ListView({ matches, keeps, label, onReset, onCopy, onRestore }) {
   const Row = ({ n, gold }) => (
     <div
       style={{
         display: "flex",
-        alignItems: "center",
+        alignItems: "baseline",
         justifyContent: "space-between",
         padding: "10px 14px",
         background: C.card,
@@ -794,14 +789,7 @@ function ListView({ matches, keeps, label, lastName, onReset, onCopy, onRestore 
         border: `1px solid ${gold ? "rgba(201,150,43,0.55)" : C.rule}`,
       }}
     >
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <span style={{ fontFamily: display, fontSize: 30, lineHeight: 1 }}>{n}</span>
-        {lastName && (
-          <span style={{ fontFamily: display, fontSize: 16, lineHeight: 1, color: "rgba(22,32,43,0.4)", marginTop: 2 }}>
-            {lastName}
-          </span>
-        )}
-      </div>
+      <span style={{ fontFamily: display, fontSize: 30, lineHeight: 1 }}>{n}</span>
     </div>
   );
 
