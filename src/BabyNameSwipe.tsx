@@ -525,6 +525,25 @@ export default function BabyNameSwipe() {
               });
             }}
           />
+        ) : view === "settings" ? (
+          <SettingsView
+            initial={{
+              yourName: state.people?.[0]?.label || "",
+              partnerName: state.people?.[1]?.label || "",
+              lastName: state.lastName || "",
+              genderFilter: state.genderFilter || "girl",
+            }}
+            onSave={(vals) => {
+              const next = structuredClone(state);
+              next.people[0].label = vals.yourName || "Parent 1";
+              next.people[1].label = vals.partnerName || "Partner";
+              next.lastName = vals.lastName;
+              next.genderFilter = vals.genderFilter;
+              persist(next);
+              setView("swipe");
+            }}
+            onBack={() => setView("swipe")}
+          />
         ) : (
           <>
             {/* header */}
@@ -539,9 +558,6 @@ export default function BabyNameSwipe() {
                 </button>
               </div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
-                <button onClick={() => setView(view === "settings" ? "swipe" : "settings")} style={chip(view === "settings")} aria-label="Settings">
-                  ⚙
-                </button>
                 {[0, 1].map((k) => (
                   <button key={k} onClick={() => setWho(k)} style={chip(who === k)}>
                     {(state?.people?.[k]?.label || `P${k + 1}`).toUpperCase()}
@@ -550,26 +566,7 @@ export default function BabyNameSwipe() {
               </div>
             </div>
 
-            {view === "settings" ? (
-              <SettingsView
-                initial={{
-                  yourName: state.people?.[0]?.label || "",
-                  partnerName: state.people?.[1]?.label || "",
-                  lastName: state.lastName || "",
-                  genderFilter: state.genderFilter || "girl",
-                }}
-                onSave={(vals) => {
-                  const next = structuredClone(state);
-                  next.people[0].label = vals.yourName || "Parent 1";
-                  next.people[1].label = vals.partnerName || "Partner";
-                  next.lastName = vals.lastName;
-                  next.genderFilter = vals.genderFilter;
-                  persist(next);
-                  setView("swipe");
-                }}
-                onBack={() => setView("swipe")}
-              />
-            ) : view === "swipe" ? (
+            {view === "swipe" ? (
               <>
                 {/* card stack */}
                 <div
@@ -656,34 +653,35 @@ export default function BabyNameSwipe() {
               </div>
             )}
 
-            {view !== "settings" && (
-              <>
-                {/* footer: stats + list/back toggle */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: view === "swipe" ? "space-between" : "flex-end",
-                    gap: 10,
-                    marginTop: 14,
-                    flexShrink: 0,
-                  }}
-                >
-                  {view === "swipe" && (
-                    <div style={{ fontSize: 11, letterSpacing: "0.14em", opacity: 0.5 }}>
-                      {remaining} LEFT · {keeps.length} KEPT · {matches.length} MATCHES
-                    </div>
-                  )}
-                  <button onClick={() => setView(view === "swipe" ? "list" : "swipe")} style={{ ...chip(view === "list"), flexShrink: 0 }}>
-                    {view === "swipe" ? `LIST · ${matches.length}` : "BACK"}
-                  </button>
+            {/* footer: stats + settings/matches toggle */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: view === "swipe" ? "space-between" : "flex-end",
+                gap: 10,
+                marginTop: 14,
+                flexShrink: 0,
+              }}
+            >
+              {view === "swipe" && (
+                <div style={{ fontSize: 11, letterSpacing: "0.14em", opacity: 0.5 }}>
+                  {remaining} LEFT · {keeps.length} KEPT · {matches.length} MATCHES
                 </div>
-                {view === "swipe" && status === "offline" && (
-                  <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.band, letterSpacing: "0.06em", flexShrink: 0 }}>
-                    Not saving. Open the list and copy a backup before you close this.
-                  </div>
-                )}
-              </>
+              )}
+              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                <button onClick={() => setView("settings")} style={chip(false)} aria-label="Settings">
+                  ⚙
+                </button>
+                <button onClick={() => setView(view === "swipe" ? "list" : "swipe")} style={chip(view === "list")}>
+                  {view === "swipe" ? `MATCHES · ${matches.length}` : "BACK"}
+                </button>
+              </div>
+            </div>
+            {view === "swipe" && status === "offline" && (
+              <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.band, letterSpacing: "0.06em", flexShrink: 0 }}>
+                Not saving. Open the list and copy a backup before you close this.
+              </div>
             )}
           </>
         )}
