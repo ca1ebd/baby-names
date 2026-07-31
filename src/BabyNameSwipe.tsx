@@ -176,11 +176,11 @@ function useStore() {
 
 /* ---------------- card ---------------- */
 
-function Badge({ item, index, dx, fly, depth, lastName }) {
+function Badge({ item, dx, fly, depth, lastName }) {
   const nameSize = item.n.length > 9 ? 62 : item.n.length > 6 ? 74 : 86;
   const rot = depth === 0 ? dx * 0.05 : 0;
-  const lift = depth * 10;
-  const scale = 1 - depth * 0.04;
+  const lift = depth * 3;
+  const scale = 1 - depth * 0.012;
 
   let transform = `translate3d(${depth === 0 ? dx : 0}px, ${lift}px, 0) rotate(${rot}deg) scale(${scale})`;
   if (depth === 0 && fly) {
@@ -321,23 +321,6 @@ function Badge({ item, index, dx, fly, depth, lastName }) {
         >
           NOPE
         </div>
-      </div>
-
-      {/* footer meta */}
-      <div
-        style={{
-          borderTop: `1px solid ${C.rule}`,
-          padding: "10px 18px",
-          display: "flex",
-          justifyContent: "flex-end",
-          fontFamily: ui,
-          fontSize: 11,
-          letterSpacing: "0.2em",
-          color: "rgba(22,32,43,0.5)",
-          flexShrink: 0,
-        }}
-      >
-        <span>{index}</span>
       </div>
     </div>
   );
@@ -635,7 +618,6 @@ export default function BabyNameSwipe() {
                         <div key={item.n} className={d === 0 && dragRef.current.active ? "" : ""}>
                           <Badge
                             item={item}
-                            index={`${i + 1} / ${deck.length}`}
                             dx={d === 0 ? dx : 0}
                             fly={d === 0 ? fly : null}
                             depth={d}
