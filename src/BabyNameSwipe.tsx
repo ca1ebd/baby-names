@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Ported as-is from the JS prototype; not worth retyping a component this dynamic.
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useUpdateCheck } from "./lib/useUpdateCheck";
 
 /* ---------------- data ---------------- */
 
@@ -270,6 +271,7 @@ function Badge({ item, index, dx, fly, depth }) {
 
 export default function BabyNameSwipe() {
   const { state, ready, persist, status } = useStore();
+  const updateAvailable = useUpdateCheck();
   const [who, setWho] = useState(0);
   const [view, setView] = useState("swipe");
 
@@ -418,14 +420,14 @@ export default function BabyNameSwipe() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
         background: `linear-gradient(170deg, ${C.wash1}, ${C.wash2})`,
         color: C.ink,
         fontFamily: ui,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        padding: "18px 16px 28px",
+        padding: "calc(18px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))",
         boxSizing: "border-box",
       }}
     >
@@ -560,6 +562,47 @@ export default function BabyNameSwipe() {
           }} />
         )}
       </div>
+
+      {updateAvailable && (
+        <div
+          style={{
+            position: "fixed",
+            top: "calc(14px + env(safe-area-inset-top))",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 50,
+            background: C.ink,
+            color: C.card,
+            padding: "10px 12px 10px 16px",
+            borderRadius: 999,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.28)",
+            fontSize: 13,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span>New version available — install now?</span>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              background: C.gold,
+              color: C.ink,
+              border: "none",
+              borderRadius: 999,
+              padding: "7px 14px",
+              fontFamily: ui,
+              fontWeight: 800,
+              fontSize: 11,
+              letterSpacing: "0.1em",
+              cursor: "pointer",
+            }}
+          >
+            INSTALL
+          </button>
+        </div>
+      )}
 
       {toast && (
         <div
