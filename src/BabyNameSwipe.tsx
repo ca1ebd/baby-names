@@ -522,6 +522,23 @@ export default function BabyNameSwipe() {
               setView("swipe");
             }}
             onBack={() => setView("swipe")}
+            onResetEverything={() => {
+              if (
+                !window.confirm(
+                  "Reset everything on this device? This clears both swipers' picks, names, and settings — you'll see the welcome screen again."
+                )
+              )
+                return;
+              persist({
+                people: [
+                  { label: "", picks: {} },
+                  { label: "", picks: {} },
+                ],
+                lastName: "",
+                genderFilter: "girl",
+                onboarded: false,
+              });
+            }}
           />
         ) : (
           <>
@@ -1014,13 +1031,32 @@ function Welcome({ onSubmit }) {
   );
 }
 
-function SettingsView({ initial, onSave, onBack }) {
+function SettingsView({ initial, onSave, onBack, onResetEverything }) {
   const f = useProfileFields(initial);
   return (
     <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, minHeight: 0, minWidth: 0, overflowY: "auto", overflowX: "hidden", overscrollBehavior: "contain" }}>
         <SectionTitle>Settings</SectionTitle>
         <ProfileFields f={f} />
+        <button
+          onClick={onResetEverything}
+          style={{
+            marginTop: 24,
+            width: "100%",
+            padding: "11px",
+            borderRadius: 10,
+            border: `1px solid rgba(196,57,47,0.35)`,
+            background: "transparent",
+            color: "rgba(196,57,47,0.85)",
+            fontFamily: ui,
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: "0.18em",
+            cursor: "pointer",
+          }}
+        >
+          RESET EVERYTHING ON THIS DEVICE
+        </button>
       </div>
       <div style={{ paddingTop: 16, flexShrink: 0 }}>
         <ProfileActions canSubmit={f.canSubmit} submitLabel="SAVE" onSubmit={() => onSave(f.values())} onCancel={onBack} />
