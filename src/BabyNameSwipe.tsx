@@ -177,7 +177,7 @@ function useStore() {
 /* ---------------- card ---------------- */
 
 function Badge({ item, index, dx, fly, depth, lastName }) {
-  const fullName = lastName ? `${item.n} ${lastName}` : item.n;
+  const nameSize = item.n.length > 9 ? 62 : item.n.length > 6 ? 74 : 86;
   const rot = depth === 0 ? dx * 0.05 : 0;
   const lift = depth * 10;
   const scale = 1 - depth * 0.04;
@@ -250,18 +250,36 @@ function Badge({ item, index, dx, fly, depth, lastName }) {
           backgroundImage: `repeating-linear-gradient(${C.card} 0 38px, rgba(22,32,43,0.06) 38px 39px)`,
         }}
       >
-        <div
-          style={{
-            fontFamily: display,
-            fontWeight: 700,
-            color: C.ink,
-            fontSize: fullName.length > 18 ? 40 : fullName.length > 14 ? 50 : fullName.length > 9 ? 62 : fullName.length > 6 ? 74 : 86,
-            lineHeight: 1,
-            textAlign: "center",
-            transform: "rotate(-1.5deg)",
-          }}
-        >
-          {fullName}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <div
+            style={{
+              fontFamily: display,
+              fontWeight: 700,
+              color: C.ink,
+              fontSize: nameSize,
+              lineHeight: 1,
+              textAlign: "center",
+              transform: "rotate(-1.5deg)",
+            }}
+          >
+            {item.n}
+          </div>
+          {lastName && (
+            <div
+              style={{
+                fontFamily: display,
+                fontWeight: 700,
+                color: "rgba(22,32,43,0.38)",
+                fontSize: Math.round(nameSize * 0.42),
+                lineHeight: 1,
+                marginTop: 2,
+                textAlign: "center",
+                transform: "rotate(-1.5deg)",
+              }}
+            >
+              {lastName}
+            </div>
+          )}
         </div>
 
         {/* stamps */}
@@ -770,7 +788,7 @@ function ListView({ matches, keeps, label, lastName, onReset, onCopy, onRestore 
     <div
       style={{
         display: "flex",
-        alignItems: "baseline",
+        alignItems: "center",
         justifyContent: "space-between",
         padding: "10px 14px",
         background: C.card,
@@ -778,10 +796,14 @@ function ListView({ matches, keeps, label, lastName, onReset, onCopy, onRestore 
         border: `1px solid ${gold ? "rgba(201,150,43,0.55)" : C.rule}`,
       }}
     >
-      <span style={{ fontFamily: display, fontSize: 30, lineHeight: 1 }}>
-        {n}
-        {lastName ? <span style={{ opacity: 0.55 }}> {lastName}</span> : null}
-      </span>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        <span style={{ fontFamily: display, fontSize: 30, lineHeight: 1 }}>{n}</span>
+        {lastName && (
+          <span style={{ fontFamily: display, fontSize: 16, lineHeight: 1, color: "rgba(22,32,43,0.4)", marginTop: 2 }}>
+            {lastName}
+          </span>
+        )}
+      </div>
     </div>
   );
 
@@ -862,22 +884,36 @@ const fieldInput = {
   boxSizing: "border-box",
 };
 
-function ProfileForm({ initial, submitLabel, onSubmit, onCancel }) {
+function useProfileFields(initial) {
   const [yourName, setYourName] = useState(initial.yourName || "");
   const [partnerName, setPartnerName] = useState(initial.partnerName || "");
   const [lastName, setLastName] = useState(initial.lastName || "");
   const [genderFilter, setGenderFilter] = useState(initial.genderFilter || "girl");
 
-  const canSubmit = yourName.trim().length > 0;
+  return {
+    yourName, setYourName,
+    partnerName, setPartnerName,
+    lastName, setLastName,
+    genderFilter, setGenderFilter,
+    canSubmit: yourName.trim().length > 0,
+    values: () => ({
+      yourName: yourName.trim(),
+      partnerName: partnerName.trim(),
+      lastName: lastName.trim(),
+      genderFilter,
+    }),
+  };
+}
 
+function ProfileFields({ f }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
       <div style={{ minWidth: 0 }}>
         <label style={fieldLabel}>YOUR NAME</label>
         <input
           style={fieldInput}
-          value={yourName}
-          onChange={(e) => setYourName(e.target.value)}
+          value={f.yourName}
+          onChange={(e) => f.setYourName(e.target.value)}
           placeholder="Your name"
           maxLength={14}
         />
@@ -886,8 +922,8 @@ function ProfileForm({ initial, submitLabel, onSubmit, onCancel }) {
         <label style={fieldLabel}>PARTNER'S NAME (OPTIONAL)</label>
         <input
           style={fieldInput}
-          value={partnerName}
-          onChange={(e) => setPartnerName(e.target.value)}
+          value={f.partnerName}
+          onChange={(e) => f.setPartnerName(e.target.value)}
           placeholder="Partner's name"
           maxLength={14}
         />
@@ -896,8 +932,8 @@ function ProfileForm({ initial, submitLabel, onSubmit, onCancel }) {
         <label style={fieldLabel}>LAST NAME (OPTIONAL)</label>
         <input
           style={fieldInput}
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
+          value={f.lastName}
+          onChange={(e) => f.setLastName(e.target.value)}
           placeholder="Shown on the card"
           maxLength={24}
         />
@@ -908,53 +944,52 @@ function ProfileForm({ initial, submitLabel, onSubmit, onCancel }) {
           {[["girl", "GIRL"], ["boy", "BOY"], ["both", "BOTH"]].map(([val, lab]) => (
             <button
               key={val}
-              onClick={() => setGenderFilter(val)}
-              style={{ ...chip(genderFilter === val), flex: 1, minWidth: 0, textAlign: "center" }}
+              onClick={() => f.setGenderFilter(val)}
+              style={{ ...chip(f.genderFilter === val), flex: 1, minWidth: 0, textAlign: "center" }}
             >
               {lab}
             </button>
           ))}
         </div>
       </div>
-      <div style={{ display: "flex", gap: 8, marginTop: 8, minWidth: 0 }}>
-        {onCancel && (
-          <button onClick={onCancel} style={{ ...ghost, minWidth: 0 }}>
-            CANCEL
-          </button>
-        )}
-        <button
-          onClick={() =>
-            onSubmit({
-              yourName: yourName.trim(),
-              partnerName: partnerName.trim(),
-              lastName: lastName.trim(),
-              genderFilter,
-            })
-          }
-          disabled={!canSubmit}
-          style={{
-            flex: 2,
-            minWidth: 0,
-            padding: "12px",
-            borderRadius: 10,
-            border: "none",
-            background: canSubmit ? C.ink : "rgba(22,32,43,0.3)",
-            color: "#fff",
-            fontFamily: ui,
-            fontWeight: 700,
-            fontSize: 13,
-            letterSpacing: "0.12em",
-            cursor: canSubmit ? "pointer" : "not-allowed",
-          }}
-        >
-          {submitLabel}
+    </div>
+  );
+}
+
+function ProfileActions({ canSubmit, submitLabel, onSubmit, onCancel }) {
+  return (
+    <div style={{ display: "flex", gap: 8, minWidth: 0 }}>
+      {onCancel && (
+        <button onClick={onCancel} style={{ ...ghost, minWidth: 0 }}>
+          CANCEL
         </button>
-      </div>
+      )}
+      <button
+        onClick={onSubmit}
+        disabled={!canSubmit}
+        style={{
+          flex: 2,
+          minWidth: 0,
+          padding: "12px",
+          borderRadius: 10,
+          border: "none",
+          background: canSubmit ? C.ink : "rgba(22,32,43,0.3)",
+          color: "#fff",
+          fontFamily: ui,
+          fontWeight: 700,
+          fontSize: 13,
+          letterSpacing: "0.12em",
+          cursor: canSubmit ? "pointer" : "not-allowed",
+        }}
+      >
+        {submitLabel}
+      </button>
     </div>
   );
 }
 
 function Welcome({ onSubmit }) {
+  const f = useProfileFields({});
   return (
     <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 24 }}>
       <div>
@@ -963,16 +998,23 @@ function Welcome({ onSubmit }) {
           Quick setup before you start swiping. This is saved on this device only.
         </p>
       </div>
-      <ProfileForm initial={{}} submitLabel="START SWIPING" onSubmit={onSubmit} />
+      <ProfileFields f={f} />
+      <ProfileActions canSubmit={f.canSubmit} submitLabel="START SWIPING" onSubmit={() => onSubmit(f.values())} />
     </div>
   );
 }
 
 function SettingsView({ initial, onSave, onBack }) {
+  const f = useProfileFields(initial);
   return (
-    <div style={{ flex: 1, minHeight: 0, minWidth: 0, overflowY: "auto", overflowX: "hidden", overscrollBehavior: "contain" }}>
-      <SectionTitle>Settings</SectionTitle>
-      <ProfileForm initial={initial} submitLabel="SAVE" onSubmit={onSave} onCancel={onBack} />
+    <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, minHeight: 0, minWidth: 0, overflowY: "auto", overflowX: "hidden", overscrollBehavior: "contain" }}>
+        <SectionTitle>Settings</SectionTitle>
+        <ProfileFields f={f} />
+      </div>
+      <div style={{ paddingTop: 16, flexShrink: 0 }}>
+        <ProfileActions canSubmit={f.canSubmit} submitLabel="SAVE" onSubmit={() => onSave(f.values())} onCancel={onBack} />
+      </div>
     </div>
   );
 }
