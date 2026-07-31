@@ -61,6 +61,7 @@ const C = {
   alert: "#A8574B",
   girlBand: "#C97B92",
   boyBand: "#5B7FB5",
+  neutralBand: "#4A5D70",
   yes: "#16795E",
   no: "#607080",
   gold: "#C9962B",
@@ -181,10 +182,10 @@ function useStore() {
 
 /* ---------------- card ---------------- */
 
-function Badge({ item, dx, fly, depth, lastName }) {
+function Badge({ item, dx, fly, depth, lastName, genderFilter }) {
   const nameSize = item.n.length > 9 ? 62 : item.n.length > 6 ? 74 : 86;
   const rot = depth === 0 ? dx * 0.05 : 0;
-  const bandColor = item.g === "boy" ? C.boyBand : C.girlBand;
+  const bandColor = genderFilter === "both" ? C.neutralBand : item.g === "boy" ? C.boyBand : C.girlBand;
 
   let transform = `translate3d(${depth === 0 ? dx : 0}px, 0px, 0) rotate(${rot}deg)`;
   if (depth === 0 && fly) {
@@ -661,6 +662,7 @@ export default function BabyNameSwipe() {
                             fly={d === 0 ? fly : null}
                             depth={d}
                             lastName={state.lastName}
+                            genderFilter={state.genderFilter}
                           />
                         </div>
                       ))
