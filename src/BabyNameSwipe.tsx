@@ -70,6 +70,8 @@ const C = {
 const display = "'Caveat', 'Segoe Script', cursive";
 const ui = "'Archivo', ui-sans-serif, system-ui, sans-serif";
 
+const BUILD_ID = import.meta.env.VITE_COMMIT_SHA?.slice(0, 7) || "dev";
+
 const ghost = {
   flex: 1,
   padding: "11px",
@@ -520,14 +522,13 @@ export default function BabyNameSwipe() {
               lastName: state.lastName || "",
               genderFilter: state.genderFilter || "girl",
             }}
-            onSave={(vals) => {
+            onChange={(vals) => {
               const next = structuredClone(state);
               next.people[0].label = vals.yourName || "Parent 1";
               next.people[1].label = vals.partnerName || "Partner";
               next.lastName = vals.lastName;
               next.genderFilter = vals.genderFilter;
               persist(next);
-              setView("swipe");
             }}
             onBack={() => setView("swipe")}
             onResetEverything={() => {
@@ -1039,8 +1040,17 @@ function Welcome({ onSubmit }) {
   );
 }
 
-function SettingsView({ initial, onSave, onBack, onResetEverything }) {
+function SettingsView({ initial, onChange, onBack, onResetEverything }) {
   const f = useProfileFields(initial);
+
+  useEffect(() => {
+    const t = setTimeout(() => onChange(f.values()), 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f.yourName, f.partnerName, f.lastName, f.genderFilter]);
+
+  const linkStyle = { color: C.ink, fontSize: 13, textDecoration: "underline" };
+
   return (
     <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, minHeight: 0, minWidth: 0, overflowY: "auto", overflowX: "hidden", overscrollBehavior: "contain" }}>
@@ -1065,9 +1075,39 @@ function SettingsView({ initial, onSave, onBack, onResetEverything }) {
         >
           RESET EVERYTHING ON THIS DEVICE
         </button>
+
+        <div style={{ marginTop: 32 }}>
+          <SectionTitle>About</SectionTitle>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <a href="https://calebdudley.dev" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+              Created by Caleb Dudley
+            </a>
+            <a href="https://github.com/ca1ebd/baby-names" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+              View source on GitHub
+            </a>
+          </div>
+          <div style={{ fontSize: 12, color: "rgba(22,32,43,0.5)", marginTop: 8 }}>Build {BUILD_ID}</div>
+        </div>
       </div>
       <div style={{ paddingTop: 16, flexShrink: 0 }}>
-        <ProfileActions canSubmit={f.canSubmit} submitLabel="SAVE" onSubmit={() => onSave(f.values())} onCancel={onBack} />
+        <button
+          onClick={onBack}
+          style={{
+            width: "100%",
+            padding: "12px",
+            borderRadius: 10,
+            border: "none",
+            background: C.ink,
+            color: "#fff",
+            fontFamily: ui,
+            fontWeight: 700,
+            fontSize: 13,
+            letterSpacing: "0.12em",
+            cursor: "pointer",
+          }}
+        >
+          BACK
+        </button>
       </div>
     </div>
   );
