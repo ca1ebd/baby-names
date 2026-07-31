@@ -457,14 +457,6 @@ export default function BabyNameSwipe() {
   const visible = deck.slice(i, i + 3);
   const label = state?.people?.[who]?.label || "";
 
-  const renameSwiper = () => {
-    const v = window.prompt("Name for this swiper", label);
-    if (!v) return;
-    const next = structuredClone(state);
-    next.people[who].label = v.slice(0, 14);
-    persist(next);
-  };
-
   const round = (bg, brd, size) => ({
     width: size,
     height: size,
@@ -499,9 +491,10 @@ export default function BabyNameSwipe() {
         @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=Caveat:wght@700&display=swap');
         .swipe-card { transition: transform .26s cubic-bezier(.2,.8,.3,1), opacity .26s ease; }
         .swipe-card.dragging { transition: none; }
+        .seg-thumb { transition: left .25s cubic-bezier(.2,.8,.3,1); }
         button:focus-visible, [role=button]:focus-visible { outline: 2px solid ${C.ink}; outline-offset: 3px; }
         @media (prefers-reduced-motion: reduce) {
-          .swipe-card { transition-duration: .01ms !important; }
+          .swipe-card, .seg-thumb { transition-duration: .01ms !important; }
         }
       `}</style>
 
@@ -547,21 +540,71 @@ export default function BabyNameSwipe() {
           <>
             {/* header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexShrink: 0, minWidth: 0 }}>
-              <div style={{ minWidth: 0, overflow: "hidden" }}>
-                <div style={{ fontSize: 10, letterSpacing: "0.3em", opacity: 0.55 }}>SWIPING AS</div>
-                <button
-                  onClick={renameSwiper}
-                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: display, fontSize: 30, fontWeight: 700, color: C.ink, lineHeight: 1, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.3em", opacity: 0.55, marginBottom: 6 }}>SWIPING AS</div>
+                <div
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    minWidth: 176,
+                    padding: 3,
+                    borderRadius: 999,
+                    background: "rgba(22,32,43,0.08)",
+                  }}
                 >
-                  {label || "—"}
-                </button>
+                  <div
+                    className="seg-thumb"
+                    style={{
+                      position: "absolute",
+                      top: 3,
+                      bottom: 3,
+                      left: who === 0 ? 3 : "50%",
+                      width: "calc(50% - 3px)",
+                      borderRadius: 999,
+                      background: C.ink,
+                      boxShadow: "0 1px 3px rgba(22,32,43,0.3)",
+                    }}
+                  />
+                  {[0, 1].map((k) => (
+                    <button
+                      key={k}
+                      onClick={() => setWho(k)}
+                      style={{
+                        position: "relative",
+                        zIndex: 1,
+                        flex: "1 1 0",
+                        minWidth: 0,
+                        padding: "8px 12px",
+                        border: "none",
+                        background: "transparent",
+                        color: who === k ? "#fff" : "rgba(22,32,43,0.6)",
+                        fontFamily: ui,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        letterSpacing: "0.1em",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        transition: "color .2s ease",
+                      }}
+                    >
+                      {(state?.people?.[k]?.label || `P${k + 1}`).toUpperCase()}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
-                {[0, 1].map((k) => (
-                  <button key={k} onClick={() => setWho(k)} style={chip(who === k)}>
-                    {(state?.people?.[k]?.label || `P${k + 1}`).toUpperCase()}
-                  </button>
-                ))}
+              <div style={{ display: "flex", gap: 10, flexShrink: 0, alignItems: "center" }}>
+                <button onClick={() => setView(view === "swipe" ? "list" : "swipe")} style={chip(view === "list")}>
+                  {view === "swipe" ? `MATCHES · ${matches.length}` : "BACK"}
+                </button>
+                <button
+                  onClick={() => setView("settings")}
+                  aria-label="Settings"
+                  style={{ background: "none", border: "none", padding: 0, color: C.ink, fontSize: 18, lineHeight: 1, cursor: "pointer", flexShrink: 0 }}
+                >
+                  ⚙
+                </button>
               </div>
             </div>
 
@@ -651,28 +694,6 @@ export default function BabyNameSwipe() {
               </div>
             )}
 
-            {/* footer: matches/back + settings */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-end",
-                gap: 10,
-                marginTop: 14,
-                flexShrink: 0,
-              }}
-            >
-              <button onClick={() => setView(view === "swipe" ? "list" : "swipe")} style={chip(view === "list")}>
-                {view === "swipe" ? `MATCHES · ${matches.length}` : "BACK"}
-              </button>
-              <button
-                onClick={() => setView("settings")}
-                aria-label="Settings"
-                style={{ background: "none", border: "none", padding: "8px", color: C.ink, fontSize: 18, lineHeight: 1, cursor: "pointer", flexShrink: 0 }}
-              >
-                ⚙
-              </button>
-            </div>
             {view === "swipe" && status === "offline" && (
               <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.band, letterSpacing: "0.06em", flexShrink: 0 }}>
                 Not saving. Open Matches and copy a backup before you close this.
