@@ -488,7 +488,7 @@ export default function BabyNameSwipe() {
         }
       `}</style>
 
-      <div style={{ width: "100%", maxWidth: 380, height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <div style={{ width: "100%", maxWidth: 380, height: "100%", display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, overflowX: "hidden" }}>
         {!ready || !state ? (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, opacity: 0.55 }}>
             Loading…
@@ -510,17 +510,17 @@ export default function BabyNameSwipe() {
         ) : (
           <>
             {/* header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexShrink: 0 }}>
-              <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexShrink: 0, minWidth: 0 }}>
+              <div style={{ minWidth: 0, overflow: "hidden" }}>
                 <div style={{ fontSize: 10, letterSpacing: "0.3em", opacity: 0.55 }}>SWIPING AS</div>
                 <button
                   onClick={renameSwiper}
-                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: display, fontSize: 30, fontWeight: 700, color: C.ink, lineHeight: 1 }}
+                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: display, fontSize: 30, fontWeight: 700, color: C.ink, lineHeight: 1, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                 >
                   {label || "—"}
                 </button>
               </div>
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                 {[0, 1].map((k) => (
                   <button key={k} onClick={() => setWho(k)} style={chip(who === k)}>
                     {(state?.people?.[k]?.label || `P${k + 1}`).toUpperCase()}
@@ -564,7 +564,7 @@ export default function BabyNameSwipe() {
               <>
                 {/* card stack */}
                 <div
-                  style={{ position: "relative", flex: 1, minHeight: 0, marginBottom: 22 }}
+                  style={{ position: "relative", flex: 1, minHeight: 0, minWidth: 0, marginBottom: 22 }}
                   onPointerDown={onDown}
                   onPointerMove={onMove}
                   onPointerUp={onUp}
@@ -613,7 +613,7 @@ export default function BabyNameSwipe() {
                 )}
               </>
             ) : (
-              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }}>
+              <div style={{ flex: 1, minHeight: 0, minWidth: 0, overflowY: "auto", overflowX: "hidden", overscrollBehavior: "contain" }}>
                 <ListView
                   matches={matches}
                   keeps={keeps}
@@ -839,6 +839,7 @@ const fieldLabel = {
 
 const fieldInput = {
   width: "100%",
+  minWidth: 0,
   padding: "12px 14px",
   borderRadius: 10,
   border: `1px solid ${C.rule}`,
@@ -858,8 +859,8 @@ function ProfileForm({ initial, submitLabel, onSubmit, onCancel }) {
   const canSubmit = yourName.trim().length > 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
+      <div style={{ minWidth: 0 }}>
         <label style={fieldLabel}>YOUR NAME</label>
         <input
           style={fieldInput}
@@ -869,7 +870,7 @@ function ProfileForm({ initial, submitLabel, onSubmit, onCancel }) {
           maxLength={14}
         />
       </div>
-      <div>
+      <div style={{ minWidth: 0 }}>
         <label style={fieldLabel}>PARTNER'S NAME (OPTIONAL)</label>
         <input
           style={fieldInput}
@@ -879,7 +880,7 @@ function ProfileForm({ initial, submitLabel, onSubmit, onCancel }) {
           maxLength={14}
         />
       </div>
-      <div>
+      <div style={{ minWidth: 0 }}>
         <label style={fieldLabel}>LAST NAME (OPTIONAL)</label>
         <input
           style={fieldInput}
@@ -889,23 +890,23 @@ function ProfileForm({ initial, submitLabel, onSubmit, onCancel }) {
           maxLength={24}
         />
       </div>
-      <div>
+      <div style={{ minWidth: 0 }}>
         <label style={fieldLabel}>NAMES TO SHOW</label>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, minWidth: 0 }}>
           {[["girl", "GIRL"], ["boy", "BOY"], ["both", "BOTH"]].map(([val, lab]) => (
             <button
               key={val}
               onClick={() => setGenderFilter(val)}
-              style={{ ...chip(genderFilter === val), flex: 1, textAlign: "center" }}
+              style={{ ...chip(genderFilter === val), flex: 1, minWidth: 0, textAlign: "center" }}
             >
               {lab}
             </button>
           ))}
         </div>
       </div>
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+      <div style={{ display: "flex", gap: 8, marginTop: 8, minWidth: 0 }}>
         {onCancel && (
-          <button onClick={onCancel} style={ghost}>
+          <button onClick={onCancel} style={{ ...ghost, minWidth: 0 }}>
             CANCEL
           </button>
         )}
@@ -921,6 +922,7 @@ function ProfileForm({ initial, submitLabel, onSubmit, onCancel }) {
           disabled={!canSubmit}
           style={{
             flex: 2,
+            minWidth: 0,
             padding: "12px",
             borderRadius: 10,
             border: "none",
@@ -942,7 +944,7 @@ function ProfileForm({ initial, submitLabel, onSubmit, onCancel }) {
 
 function Welcome({ onSubmit }) {
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 24 }}>
+    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 24 }}>
       <div>
         <div style={{ fontFamily: display, fontSize: 44, lineHeight: 1 }}>Welcome</div>
         <p style={{ fontSize: 13, opacity: 0.65, marginTop: 10, lineHeight: 1.6 }}>
@@ -956,7 +958,7 @@ function Welcome({ onSubmit }) {
 
 function SettingsView({ initial, onSave, onBack }) {
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }}>
+    <div style={{ flex: 1, minHeight: 0, minWidth: 0, overflowY: "auto", overflowX: "hidden", overscrollBehavior: "contain" }}>
       <SectionTitle>Settings</SectionTitle>
       <ProfileForm initial={initial} submitLabel="SAVE" onSubmit={onSave} onCancel={onBack} />
     </div>
