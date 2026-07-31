@@ -211,14 +211,6 @@ function Badge({ item, dx, fly, depth, lastName }) {
         style={{
           width: "100%",
           height: "100%",
-          borderRadius: 20,
-          boxShadow: "0 2px 4px rgba(22,32,43,0.10), 0 20px 18px rgba(22,32,43,0.14)",
-        }}
-      >
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
           background: C.card,
           borderRadius: 20,
           border: `1px solid ${C.rule}`,
@@ -338,7 +330,6 @@ function Badge({ item, dx, fly, depth, lastName }) {
         >
           NOPE
         </div>
-      </div>
       </div>
       </div>
     </div>
