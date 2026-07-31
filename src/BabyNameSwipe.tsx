@@ -32,12 +32,12 @@ function shuffled(list) {
 }
 
 const GIRL_NAMES = shuffled([
-  ...RAW.girl.c.map((n) => ({ n, s: "c" })),
-  ...RAW.girl.u.map((n) => ({ n, s: "u" })),
+  ...RAW.girl.c.map((n) => ({ n, s: "c", g: "girl" })),
+  ...RAW.girl.u.map((n) => ({ n, s: "u", g: "girl" })),
 ]);
 const BOY_NAMES = shuffled([
-  ...RAW.boy.c.map((n) => ({ n, s: "c" })),
-  ...RAW.boy.u.map((n) => ({ n, s: "u" })),
+  ...RAW.boy.c.map((n) => ({ n, s: "c", g: "boy" })),
+  ...RAW.boy.u.map((n) => ({ n, s: "u", g: "boy" })),
 ]);
 const BOTH_NAMES = shuffled([...GIRL_NAMES, ...BOY_NAMES]);
 
@@ -58,7 +58,9 @@ const C = {
   wash1: "#D3DCE2",
   wash2: "#B4C3CD",
   card: "#FFFDF7",
-  band: "#A8574B",
+  alert: "#A8574B",
+  girlBand: "#C97B92",
+  boyBand: "#5B7FB5",
   yes: "#16795E",
   no: "#607080",
   gold: "#C9962B",
@@ -72,26 +74,27 @@ const ghost = {
   flex: 1,
   padding: "11px",
   borderRadius: 10,
-  border: `1px solid rgba(22,32,43,0.2)`,
+  border: `1px solid rgba(22,32,43,0.3)`,
   background: "transparent",
-  color: "rgba(22,32,43,0.6)",
+  color: "rgba(22,32,43,0.78)",
   fontFamily: ui,
-  fontSize: 11,
+  fontSize: 12,
+  fontWeight: 600,
   letterSpacing: "0.16em",
   cursor: "pointer",
 };
 
 const chip = (active) => ({
   fontFamily: ui,
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
-  letterSpacing: "0.14em",
+  letterSpacing: "0.13em",
   padding: "7px 12px",
   borderRadius: 999,
   cursor: "pointer",
-  border: `1px solid ${active ? C.ink : "rgba(22,32,43,0.2)"}`,
+  border: `1px solid ${active ? C.ink : "rgba(22,32,43,0.25)"}`,
   background: active ? C.ink : "transparent",
-  color: active ? "#fff" : "rgba(22,32,43,0.65)",
+  color: active ? "#fff" : "rgba(22,32,43,0.75)",
 });
 
 /* ---------------- helpers ---------------- */
@@ -179,6 +182,7 @@ function useStore() {
 function Badge({ item, dx, fly, depth, lastName }) {
   const nameSize = item.n.length > 9 ? 62 : item.n.length > 6 ? 74 : 86;
   const rot = depth === 0 ? dx * 0.05 : 0;
+  const bandColor = item.g === "boy" ? C.boyBand : C.girlBand;
 
   let transform = `translate3d(${depth === 0 ? dx : 0}px, 0px, 0) rotate(${rot}deg)`;
   if (depth === 0 && fly) {
@@ -200,7 +204,7 @@ function Badge({ item, dx, fly, depth, lastName }) {
         background: C.card,
         borderRadius: 20,
         border: `1px solid ${C.rule}`,
-        boxShadow: `0 ${8 + depth * 4}px ${28 + depth * 8}px rgba(22,32,43,${0.18 - depth * 0.05})`,
+        boxShadow: "0 8px 28px rgba(22,32,43,0.18)",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
@@ -209,7 +213,7 @@ function Badge({ item, dx, fly, depth, lastName }) {
       }}
     >
       {/* badge band */}
-      <div style={{ background: C.band, padding: "16px 18px 12px", flexShrink: 0 }}>
+      <div style={{ background: bandColor, padding: "16px 18px 12px", flexShrink: 0 }}>
         <div
           style={{
             fontFamily: ui,
@@ -474,6 +478,8 @@ export default function BabyNameSwipe() {
         .swipe-card.dragging { transition: none; }
         .seg-thumb { transition: left .25s cubic-bezier(.2,.8,.3,1); }
         button:focus-visible, [role=button]:focus-visible { outline: 2px solid ${C.ink}; outline-offset: 3px; }
+        input::placeholder { color: rgba(22,32,43,0.4); }
+        input:focus { outline: none; border-color: ${C.ink} !important; box-shadow: 0 0 0 3px rgba(22,32,43,0.12) !important; }
         @media (prefers-reduced-motion: reduce) {
           .swipe-card, .seg-thumb { transition-duration: .01ms !important; }
         }
@@ -481,7 +487,7 @@ export default function BabyNameSwipe() {
 
       <div style={{ width: "100%", maxWidth: 380, height: "100%", display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, overflowX: "hidden" }}>
         {!ready || !state ? (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, opacity: 0.55 }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "rgba(22,32,43,0.7)" }}>
             Loading…
           </div>
         ) : !state.onboarded ? (
@@ -522,7 +528,7 @@ export default function BabyNameSwipe() {
             {/* header */}
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 14, flexShrink: 0, minWidth: 0 }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 10, letterSpacing: "0.3em", opacity: 0.55, marginBottom: 6 }}>SWIPING AS</div>
+                <div style={{ fontSize: 12, letterSpacing: "0.26em", color: "rgba(22,32,43,0.68)", marginBottom: 6 }}>SWIPING AS</div>
                 <div
                   style={{
                     position: "relative",
@@ -558,11 +564,11 @@ export default function BabyNameSwipe() {
                         padding: "8px 12px",
                         border: "none",
                         background: "transparent",
-                        color: who === k ? "#fff" : "rgba(22,32,43,0.6)",
+                        color: who === k ? "#fff" : "rgba(22,32,43,0.75)",
                         fontFamily: ui,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: 600,
-                        letterSpacing: "0.1em",
+                        letterSpacing: "0.08em",
                         cursor: "pointer",
                         whiteSpace: "nowrap",
                         overflow: "hidden",
@@ -689,7 +695,7 @@ export default function BabyNameSwipe() {
             )}
 
             {view === "swipe" && status === "offline" && (
-              <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.band, letterSpacing: "0.06em", flexShrink: 0 }}>
+              <div style={{ textAlign: "center", marginTop: 8, fontSize: 12, color: C.alert, letterSpacing: "0.06em", flexShrink: 0 }}>
                 Not saving. Open Matches and copy a backup before you close this.
               </div>
             )}
@@ -728,7 +734,7 @@ export default function BabyNameSwipe() {
               padding: "7px 14px",
               fontFamily: ui,
               fontWeight: 800,
-              fontSize: 11,
+              fontSize: 12,
               letterSpacing: "0.1em",
               cursor: "pointer",
             }}
@@ -816,7 +822,7 @@ function ListView({ matches, keeps, label, onReset, onCopy, onRestore }) {
           {matches.map((x) => <Row key={x.n} {...x} gold />)}
         </div>
       ) : (
-        <p style={{ fontSize: 13, opacity: 0.6, marginBottom: 26, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 13, color: "rgba(22,32,43,0.72)", marginBottom: 26, lineHeight: 1.6 }}>
           Nothing yet. Switch swipers up top and run the deck as the other parent — names you both keep land here.
         </p>
       )}
@@ -841,10 +847,11 @@ function ListView({ matches, keeps, label, onReset, onCopy, onRestore }) {
             borderRadius: 10,
             border: `1px solid rgba(196,57,47,0.35)`,
             background: "transparent",
-            color: "rgba(196,57,47,0.8)",
+            color: "rgba(196,57,47,0.85)",
             fontFamily: ui,
-            fontSize: 11,
-            letterSpacing: "0.2em",
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: "0.18em",
             cursor: "pointer",
           }}
         >
@@ -856,7 +863,7 @@ function ListView({ matches, keeps, label, onReset, onCopy, onRestore }) {
 }
 
 function SectionTitle({ children }) {  return (
-    <div style={{ fontSize: 10, letterSpacing: "0.28em", opacity: 0.5, margin: "0 0 10px", textTransform: "uppercase" }}>
+    <div style={{ fontSize: 12, letterSpacing: "0.24em", color: "rgba(22,32,43,0.65)", margin: "0 0 10px", textTransform: "uppercase" }}>
       {children}
     </div>
   );
@@ -865,9 +872,10 @@ function SectionTitle({ children }) {  return (
 /* ---------------- profile / onboarding ---------------- */
 
 const fieldLabel = {
-  fontSize: 11,
-  letterSpacing: "0.16em",
-  opacity: 0.6,
+  fontSize: 12,
+  fontWeight: 600,
+  letterSpacing: "0.14em",
+  color: "rgba(22,32,43,0.7)",
   marginBottom: 6,
   display: "block",
 };
@@ -877,11 +885,12 @@ const fieldInput = {
   minWidth: 0,
   padding: "12px 14px",
   borderRadius: 10,
-  border: `1px solid ${C.rule}`,
+  border: `1px solid rgba(22,32,43,0.22)`,
   background: C.card,
   color: C.ink,
   fontFamily: ui,
   fontSize: 15,
+  boxShadow: "0 1px 3px rgba(22,32,43,0.08)",
   boxSizing: "border-box",
 };
 
