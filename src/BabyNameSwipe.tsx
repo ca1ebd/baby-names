@@ -906,7 +906,7 @@ const fieldInput = {
   background: C.card,
   color: C.ink,
   fontFamily: ui,
-  fontSize: 15,
+  fontSize: 16,
   boxShadow: "0 1px 3px rgba(22,32,43,0.08)",
   boxSizing: "border-box",
 };
