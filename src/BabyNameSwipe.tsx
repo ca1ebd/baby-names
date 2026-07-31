@@ -420,14 +420,16 @@ export default function BabyNameSwipe() {
   return (
     <div
       style={{
-        minHeight: "100dvh",
+        height: "100dvh",
+        overflow: "hidden",
+        overscrollBehavior: "none",
         background: `linear-gradient(170deg, ${C.wash1}, ${C.wash2})`,
         color: C.ink,
         fontFamily: ui,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        padding: "calc(18px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))",
+        padding: "calc(18px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))",
         boxSizing: "border-box",
       }}
     >
@@ -441,9 +443,9 @@ export default function BabyNameSwipe() {
         }
       `}</style>
 
-      <div style={{ width: "100%", maxWidth: 380 }}>
+      <div style={{ width: "100%", maxWidth: 380, height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}>
         {/* header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 10, letterSpacing: "0.3em", opacity: 0.55 }}>SWIPING AS</div>
             <button
@@ -463,7 +465,7 @@ export default function BabyNameSwipe() {
         </div>
 
         {/* filters */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap", flexShrink: 0 }}>
           <button onClick={() => setView(view === "swipe" ? "list" : "swipe")} style={{ ...chip(view === "list"), marginLeft: "auto" }}>
             {view === "swipe" ? `LIST · ${matches.length}` : "BACK"}
           </button>
@@ -473,7 +475,7 @@ export default function BabyNameSwipe() {
           <>
             {/* card stack */}
             <div
-              style={{ position: "relative", height: 460, marginBottom: 22 }}
+              style={{ position: "relative", flex: 1, minHeight: 0, marginBottom: 22 }}
               onPointerDown={onDown}
               onPointerMove={onMove}
               onPointerUp={onUp}
@@ -507,59 +509,62 @@ export default function BabyNameSwipe() {
             </div>
 
             {/* controls */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, flexShrink: 0 }}>
               <button onClick={() => decide("pass")} style={{ ...round(C.card, C.no, 62), color: C.no, fontSize: 24 }} aria-label="Pass">✕</button>
               <button onClick={undo} disabled={!history.length} style={{ ...round("transparent", "rgba(22,32,43,0.25)", 44), color: "rgba(22,32,43,0.5)", fontSize: 15, opacity: history.length ? 1 : 0.35, boxShadow: "none" }} aria-label="Undo">↺</button>
               <button onClick={() => decide("like")} style={{ ...round(C.card, C.yes, 62), color: C.yes, fontSize: 24 }} aria-label="Keep">♥</button>
             </div>
 
-            <div style={{ textAlign: "center", marginTop: 14, fontSize: 11, letterSpacing: "0.18em", opacity: 0.5 }}>
+            <div style={{ textAlign: "center", marginTop: 14, fontSize: 11, letterSpacing: "0.18em", opacity: 0.5, flexShrink: 0 }}>
               {remaining} LEFT · {keeps.length} KEPT · {matches.length} MATCHES
             </div>
             {status === "offline" && (
-              <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.band, letterSpacing: "0.06em" }}>
+              <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.band, letterSpacing: "0.06em", flexShrink: 0 }}>
                 Not saving. Open the list and copy a backup before you close this.
               </div>
             )}
           </>
         ) : (
-          <ListView
-            matches={matches}
-            keeps={keeps}
-            label={label}
-            onCopy={() => {
-              const text = JSON.stringify(state);
-              try {
-                navigator.clipboard.writeText(text);
-                setToast("copied");
-                setTimeout(() => setToast(null), 1800);
-              } catch {
-                window.prompt("Copy this and keep it somewhere safe:", text);
-              }
-            }}
-            onRestore={() => {
-              const raw = window.prompt("Paste a backup to restore:");
-              if (!raw) return;
-              try {
-                const parsed = JSON.parse(raw);
-                if (!Array.isArray(parsed?.people)) throw new Error("bad shape");
-                persist(parsed);
-                setDeck(pool.filter((x) => !parsed.people[who].picks[x.n]));
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }}>
+            <ListView
+              matches={matches}
+              keeps={keeps}
+              label={label}
+              onCopy={() => {
+                const text = JSON.stringify(state);
+                try {
+                  navigator.clipboard.writeText(text);
+                  setToast("copied");
+                  setTimeout(() => setToast(null), 1800);
+                } catch {
+                  window.prompt("Copy this and keep it somewhere safe:", text);
+                }
+              }}
+              onRestore={() => {
+                const raw = window.prompt("Paste a backup to restore:");
+                if (!raw) return;
+                try {
+                  const parsed = JSON.parse(raw);
+                  if (!Array.isArray(parsed?.people)) throw new Error("bad shape");
+                  persist(parsed);
+                  setDeck(pool.filter((x) => !parsed.people[who].picks[x.n]));
+                  setI(0);
+                  setHistory([]);
+                } catch {
+                  window.alert("That didn't look like a backup from this app.");
+                }
+              }}
+              onReset={() => {
+                if (!window.confirm(`Clear all of ${label}'s picks?`)) return;
+                const next = structuredClone(state);
+                next.people[who].picks = {};
+                persist(next);
+                setDeck(pool);
                 setI(0);
                 setHistory([]);
-              } catch {
-                window.alert("That didn't look like a backup from this app.");
-              }
-            }}
-            onReset={() => {
-            if (!window.confirm(`Clear all of ${label}'s picks?`)) return;
-            const next = structuredClone(state);
-            next.people[who].picks = {};
-            persist(next);
-            setDeck(pool);
-            setI(0);
-            setHistory([]);
-          }} />
+              }}
+            />
+          </div>
         )}
       </div>
 
