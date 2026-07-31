@@ -179,10 +179,8 @@ function useStore() {
 function Badge({ item, dx, fly, depth, lastName }) {
   const nameSize = item.n.length > 9 ? 62 : item.n.length > 6 ? 74 : 86;
   const rot = depth === 0 ? dx * 0.05 : 0;
-  const lift = depth * 3;
-  const scale = 1 - depth * 0.012;
 
-  let transform = `translate3d(${depth === 0 ? dx : 0}px, ${lift}px, 0) rotate(${rot}deg) scale(${scale})`;
+  let transform = `translate3d(${depth === 0 ? dx : 0}px, 0px, 0) rotate(${rot}deg)`;
   if (depth === 0 && fly) {
     const dir = fly === "like" ? 1 : -1;
     transform = `translate3d(${dir * 720}px, 40px, 0) rotate(${dir * 22}deg)`;
