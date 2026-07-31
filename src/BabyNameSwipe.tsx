@@ -212,7 +212,7 @@ function Badge({ item, dx, fly, depth, lastName }) {
           width: "100%",
           height: "100%",
           borderRadius: 20,
-          boxShadow: "0 8px 28px rgba(22,32,43,0.18)",
+          boxShadow: "0 2px 4px rgba(22,32,43,0.10), 0 20px 18px rgba(22,32,43,0.14)",
         }}
       >
       <div
