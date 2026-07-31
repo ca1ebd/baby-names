@@ -6,11 +6,17 @@ import { useUpdateCheck } from "./lib/useUpdateCheck";
 /* ---------------- data ---------------- */
 
 const RAW = {
-  c: ["Abigail","Adeline","Alice","Amelia","Anna","Audrey","Ava","Brooke","Caroline","Cecilia","Charlotte","Chloe","Claire","Clara","Eleanor","Elizabeth","Ella","Emily","Emma","Evelyn","Genevieve","Grace","Hannah","Hazel","Isabella","Josephine","Julia","Juliet","Katherine","Lauren","Leah","Lillian","Lucy","Madeline","Maggie","Margaret","Mia","Molly","Natalie","Nora","Olivia","Paige","Rachel","Rose","Sadie","Sarah","Sophia","Stella","Violet","Vivian",
-      "Addison","Alexandra","Allison","Amanda","Amy","Andrea","Angela","Annabelle","Annie","April","Ashley","Aubrey","Autumn","Beatrice","Bella","Bridget","Brooklyn","Camille","Carly","Cassandra","Catherine","Chelsea","Christina","Cora","Cordelia","Courtney","Daisy","Danielle","Daphne","Delaney","Delilah","Diana","Eden","Edith","Elena","Eliza","Elise","Ellie","Eloise","Elsie","Erin","Esther","Eva","Faith","Fiona","Florence","Gabrielle","Georgia","Gwendolyn","Harriet","Heidi","Helen","Holly","Hope","Iris","Isla","Ivy","Jane","Jenna","Jessica","Joy","Kate","Kayla","Kelsey","Laura","Lena","Lila","Louisa","Lydia","Mabel","Madison","Mallory","Mary","Matilda","Maya","Megan","Meredith","Miriam","Naomi","Nicole","Ophelia","Penelope","Phoebe","Rebecca","Rosalie","Rosemary","Ruby","Ruth","Savannah","Scarlett","Serena","Sienna","Summer","Sylvia","Tessa","Vanessa","Veronica","Victoria","Willa","Zoe",
-      "Aaliyah","Adele","Adelina","Adelaide","Agatha","Agnes","Alba","Alina","Alma","Amara","Amber","Anastasia","Angelina","Anita","Annalise","Annika","Antonia","Ariadne","Ariana","Arielle","Arlene","Astrid","Athena","Aurelia","Aurora","Beatrix","Bernadette","Bianca","Blanche","Blythe","Briar","Brielle","Brigid","Camilla","Candace","Carina","Carmen","Carol","Carolina","Cassia","Catalina","Celeste","Celia","Charissa","Chiara","Clarissa","Claudia","Clementine","Colette","Constance","Cornelia","Cressida","Crystal","Edwina","Elaina","Elaine","Electra","Elin","Elinor","Elissa","Eliana","Elowen","Elyse","Emmeline","Enid","Estelle","Etta","Eugenia","Eunice","Evangeline","Evanna","Fatima","Fern","Fernanda","Filippa","Flora","Frances","Francesca","Freya","Gemma","Georgina","Geraldine","Gianna","Gigi","Gilda","Ginger","Gloria","Golda","Greta","Griselda","Guinevere","Gwen","Gwyneth","Hedda","Helena","Henrietta","Hermione","Hester","Hilda","Honora","Ida","Ilana","Ilse","Imani","Imogen","Ines","Ingrid","Iolanthe","Irene","Irina","Isabel","Isadora","Isolde","Jacinta","Jacqueline","Jael","Jamila","Janelle","Janet","Janice","Jasmine","Jean","Jeanette","Jemima","Jennifer","Jill","Jocelyn","Jolene","Jonquil","Jordana","Juanita","Judith","Julianne","Juniper","Justine","Karina","Karis","Kassandra","Katia","Keziah","Kiera","Kirsten","Klara","Kyra","Laila","Lana","Lara","Larissa","Laurel","Lavinia"],
-  u: ["Arden","Avery","Blair","Blakely","Campbell","Charlie","Ellis","Emerson","Emery","Everly","Finley","Frankie","Greer","Hadley","Harper","Hayden","Hollis","Kennedy","Landry","Larkin","Lennon","Logan","London","Marlowe","Merritt","Monroe","Oakley","Palmer","Parker","Peyton","Presley","Quinn","Reagan","Reese","Remi","Riley","Ripley","Rory","Rowan","Sawyer","Scout","Shea","Sloane","Spencer","Sutton","Sydney","Tatum","Teagan","Winter","Wren",
-      "Arlo","Aspen","Bowen","Brecken","Briggs","Callan","Carson","Cove","Easton","Elliot","Emberlynn","Ember","Fallon","Fox","Griffin","Harlow","Haven","Indigo","Jagger","Jules","Justice","Kai","Karsyn","Keegan","Lake","Lark","Legend","Lincoln","Marlow","Maverick","Milan","North","Onyx","Phoenix","Piper","River","Salem","Saylor","Sloan","True","Vale","West","Wilder","Zion","Aubree","Blaise","Brynlee","Cairo","Cassius","Cedar"],
+  girl: {
+    c: ["Abigail","Adeline","Alice","Amelia","Anna","Audrey","Ava","Brooke","Caroline","Cecilia","Charlotte","Chloe","Claire","Clara","Eleanor","Elizabeth","Ella","Emily","Emma","Evelyn","Genevieve","Grace","Hannah","Hazel","Isabella","Josephine","Julia","Juliet","Katherine","Lauren","Leah","Lillian","Lucy","Madeline","Maggie","Margaret","Mia","Molly","Natalie","Nora","Olivia","Paige","Rachel","Rose","Sadie","Sarah","Sophia","Stella","Violet","Vivian",
+        "Addison","Alexandra","Allison","Amanda","Amy","Andrea","Angela","Annabelle","Annie","April","Ashley","Aubrey","Autumn","Beatrice","Bella","Bridget","Brooklyn","Camille","Carly","Cassandra","Catherine","Chelsea","Christina","Cora","Cordelia","Courtney","Daisy","Danielle","Daphne","Delaney","Delilah","Diana","Eden","Edith","Elena","Eliza","Elise","Ellie","Eloise","Elsie","Erin","Esther","Eva","Faith","Fiona","Florence","Gabrielle","Georgia","Gwendolyn","Harriet","Heidi","Helen","Holly","Hope","Iris","Isla","Ivy","Jane","Jenna","Jessica","Joy","Kate","Kayla","Kelsey","Laura","Lena","Lila","Louisa","Lydia","Mabel","Madison","Mallory","Mary","Matilda","Maya","Megan","Meredith","Miriam","Naomi","Nicole","Ophelia","Penelope","Phoebe","Rebecca","Rosalie","Rosemary","Ruby","Ruth","Savannah","Scarlett","Serena","Sienna","Summer","Sylvia","Tessa","Vanessa","Veronica","Victoria","Willa","Zoe",
+        "Aaliyah","Adele","Adelina","Adelaide","Agatha","Agnes","Alba","Alina","Alma","Amara","Amber","Anastasia","Angelina","Anita","Annalise","Annika","Antonia","Ariadne","Ariana","Arielle","Arlene","Astrid","Athena","Aurelia","Aurora","Beatrix","Bernadette","Bianca","Blanche","Blythe","Briar","Brielle","Brigid","Camilla","Candace","Carina","Carmen","Carol","Carolina","Cassia","Catalina","Celeste","Celia","Charissa","Chiara","Clarissa","Claudia","Clementine","Colette","Constance","Cornelia","Cressida","Crystal","Edwina","Elaina","Elaine","Electra","Elin","Elinor","Elissa","Eliana","Elowen","Elyse","Emmeline","Enid","Estelle","Etta","Eugenia","Eunice","Evangeline","Evanna","Fatima","Fern","Fernanda","Filippa","Flora","Frances","Francesca","Freya","Gemma","Georgina","Geraldine","Gianna","Gigi","Gilda","Ginger","Gloria","Golda","Greta","Griselda","Guinevere","Gwen","Gwyneth","Hedda","Helena","Henrietta","Hermione","Hester","Hilda","Honora","Ida","Ilana","Ilse","Imani","Imogen","Ines","Ingrid","Iolanthe","Irene","Irina","Isabel","Isadora","Isolde","Jacinta","Jacqueline","Jael","Jamila","Janelle","Janet","Janice","Jasmine","Jean","Jeanette","Jemima","Jennifer","Jill","Jocelyn","Jolene","Jonquil","Jordana","Juanita","Judith","Julianne","Juniper","Justine","Karina","Karis","Kassandra","Katia","Keziah","Kiera","Kirsten","Klara","Kyra","Laila","Lana","Lara","Larissa","Laurel","Lavinia"],
+    u: ["Arden","Avery","Blair","Blakely","Campbell","Charlie","Ellis","Emerson","Emery","Everly","Finley","Frankie","Greer","Hadley","Harper","Hayden","Hollis","Kennedy","Landry","Larkin","Lennon","Logan","London","Marlowe","Merritt","Monroe","Oakley","Palmer","Parker","Peyton","Presley","Quinn","Reagan","Reese","Remi","Riley","Ripley","Rory","Rowan","Sawyer","Scout","Shea","Sloane","Spencer","Sutton","Sydney","Tatum","Teagan","Winter","Wren",
+        "Arlo","Aspen","Bowen","Brecken","Briggs","Callan","Carson","Cove","Easton","Elliot","Emberlynn","Ember","Fallon","Fox","Griffin","Harlow","Haven","Indigo","Jagger","Jules","Justice","Kai","Karsyn","Keegan","Lake","Lark","Legend","Lincoln","Marlow","Maverick","Milan","North","Onyx","Phoenix","Piper","River","Salem","Saylor","Sloan","True","Vale","West","Wilder","Zion","Aubree","Blaise","Brynlee","Cairo","Cassius","Cedar"],
+  },
+  boy: {
+    c: ["Abner","Alaric","Alden","Alfred","Alonzo","Amos","Anatole","Angelo","Ansel","Archibald","Armand","Arnold","Aristotle","Arno","Baldwin","Barrett","Bertram","Blaine","Bram","Burke","Cain","Callum","Casimir","Cato","Cecil","Clarence","Corbin","Corwin","Elton","Emil","Errol","Everett","Ewan","Fabius","Faust","Ferris","Finch","Finnian","Flint","Floyd","Fraser","Gerald","Gerard","Gordon","Griffith","Harlan","Harmon","Hobart","Ike","Isham","Ivor","Jarvis","Jensen","Jorah","Kellan","Kip","Lambert","Lars","Leif","Lennox","Leon","Lex","Lior","Lloyd","Lorcan","Lucius","Manfred","Marlon","Maurice","Maynard","Merle","Mervin","Mick","Milton","Monte","Nestor","Newton","Niles","Nolan","Norbert","Norris","Odin","Ogden","Oren","Orville","Osmond","Pablo","Phil","Piers","Powell","Ragnar","Ramon","Rand","Ransom","Rawlins","Reece","Remus","Rene","Roald","Roscoe","Rowland","Rudyard","Sanford","Sargent","Selwyn","Severin","Silvio","Simeon","Sinclair","Skyler","Solon","Stellan","Tobin","Tremaine","Tucker","Tudor","Ulric","Upton","Vance","Vernon","Wallis","Walton","Warwick","Wilbur","Wilfred","Willem","Wilmer","Winfield","Woodrow","Wyndham","Xander","Yale","Zander","Zeb","Zebedee","Aaron","Abel","Abraham","Adrian","Alexander","Alistair","Ambrose","Anders","Andrew","Angus","Anselm","Archer","Arthur","Asher","Atlas","Augustus","Aurelio","Austin","Axel","Bartholomew","Basil","Baxter","Beckett","Benedict","Benjamin","Bennett","Bernard","Bishop","Blake","Boaz","Boris","Brendan","Brennan","Brett","Brian","Broderick","Bruno","Byron","Caesar","Caleb","Calvin","Camden","Carter","Cash","Cedric","Chance","Charles","Christian","Christopher","Clark","Claude","Clement","Clifford","Clive","Colton","Conrad","Constantine","Cormac","Cornelius","Cosmo","Crispin","Curtis","Cyrus","Earl","Edgar","Edmund","Edward","Edwin","Elias","Eli","Elijah","Elliott","Emmett","Enoch","Enzo","Ephraim","Erasmus","Eric","Ernest","Ethan","Eugene","Evan","Ezekiel","Ezra","Fabian","Felix","Fenwick","Ferdinand","Fergus","Finnegan","Fitzgerald","Fletcher","Flynn","Forrest","Francis","Franklin","Frederick","Gabriel","Gareth","Garrison","Gavin","Gideon","Gilbert","Giles","Graham","Grant","Grover","Gulliver","Gunner","Gus","Hamilton","Hamish","Harold","Harrison","Hector","Herbert","Hezekiah","Hiram","Homer","Horace","Howard","Hudson","Hugh","Hugo","Ian","Ignatius","Ingram","Ira","Irving","Isaac","Isaiah","Ivan","Jack","Jackson","Jacob","James","Jared","Jason","Jasper","Jerome","Jesse","Jethro","Job","Joel","Jonah","Jonas","Jonathan","Joseph","Joshua","Judah","Jude","Julian","Julius","Justin","Kenneth","Kingston","Klaus","Knox","Konrad","Lachlan","Lawrence","Lazarus","Leo","Leonard","Leopold","Levi","Lewis","Linus","Lionel","Llewellyn","Lorenzo","Louis","Lucas","Lucian","Ludwig","Magnus","Malachi","Malcolm","Marcus","Mark","Marshall","Martin","Marvin","Mason","Mathias","Matthew","Maximilian","Maxwell","Merrick","Micah","Michael","Miles"],
+    u: ["Ace","Ash","Bear","Bo","Boone","Bodhi","Brice","Brooks","Cal","Case","Cassian","Cliff","Colt","Crew","Cruz","Ellison","Fisher","Gage","Hawk","Holt","Huck","Hux","Jace","Jax","Jett","Kase","Kit","Knight","Lane","Rebel","Reign","Rome","Saint","Slater","Stetson","Stryker","Trace","Ranger","Reeve","Ridge","Rocco","Rock","Slate","Steel","Talon","Tex","Thatcher","Wolf","Beau","Cole","Cage","Chase","Emrys","Gunnar","Hank","Hoyt","Kade","Kayce","Keanu","Lev","Maddox","Nash","Nix","Rad","Rain","Raiden","Rio","Roan","Tanner","Wade","Wells","Wyatt","Zeke"],
+  },
 };
 
 // fixed-seed shuffle: styles interleave, and both parents see the same order
@@ -25,10 +31,21 @@ function shuffled(list) {
   return a;
 }
 
-const NAMES = shuffled([
-  ...RAW.c.map((n) => ({ n, s: "c" })),
-  ...RAW.u.map((n) => ({ n, s: "u" })),
+const GIRL_NAMES = shuffled([
+  ...RAW.girl.c.map((n) => ({ n, s: "c" })),
+  ...RAW.girl.u.map((n) => ({ n, s: "u" })),
 ]);
+const BOY_NAMES = shuffled([
+  ...RAW.boy.c.map((n) => ({ n, s: "c" })),
+  ...RAW.boy.u.map((n) => ({ n, s: "u" })),
+]);
+const BOTH_NAMES = shuffled([...GIRL_NAMES, ...BOY_NAMES]);
+
+function poolFor(genderFilter) {
+  if (genderFilter === "boy") return BOY_NAMES;
+  if (genderFilter === "both") return BOTH_NAMES;
+  return GIRL_NAMES;
+}
 
 // DO NOT CHANGE THIS KEY. Changing it orphans every saved swipe.
 // Adding or removing names is safe — picks are keyed by name, not position.
@@ -64,6 +81,19 @@ const ghost = {
   cursor: "pointer",
 };
 
+const chip = (active) => ({
+  fontFamily: ui,
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: "0.14em",
+  padding: "7px 12px",
+  borderRadius: 999,
+  cursor: "pointer",
+  border: `1px solid ${active ? C.ink : "rgba(22,32,43,0.2)"}`,
+  background: active ? C.ink : "transparent",
+  color: active ? "#fff" : "rgba(22,32,43,0.65)",
+});
+
 /* ---------------- helpers ---------------- */
 
 function useStore() {
@@ -76,19 +106,46 @@ function useStore() {
     (async () => {
       const fallback = {
         people: [
-          { label: "Caleb", picks: {} },
-          { label: "Cailyn", picks: {} },
+          { label: "", picks: {} },
+          { label: "", picks: {} },
         ],
+        lastName: "",
+        genderFilter: "girl",
+        onboarded: false,
       };
       let loaded = fallback;
+      let migrated = false;
       let ok = true;
       try {
         const r = await window.storage.get(STORAGE_KEY, true);
-        if (r) loaded = JSON.parse(r.value);
+        if (r) {
+          const parsed = JSON.parse(r.value);
+          // Legacy saves (from before profiles/gender filter existed) have no
+          // `onboarded` field. Backfill it so existing instances keep working
+          // without being sent through the welcome dialog again.
+          if (parsed.onboarded === undefined) {
+            loaded = {
+              ...parsed,
+              lastName: parsed.lastName ?? "",
+              genderFilter: parsed.genderFilter ?? "girl",
+              onboarded: true,
+            };
+            migrated = true;
+          } else {
+            loaded = parsed;
+          }
+        }
       } catch {
         // either nothing saved yet, or storage is unavailable — probe to find out which
         try {
           await window.storage.set(STORAGE_KEY, JSON.stringify(fallback), true);
+        } catch {
+          ok = false;
+        }
+      }
+      if (migrated) {
+        try {
+          await window.storage.set(STORAGE_KEY, JSON.stringify(loaded), true);
         } catch {
           ok = false;
         }
@@ -119,7 +176,8 @@ function useStore() {
 
 /* ---------------- card ---------------- */
 
-function Badge({ item, index, dx, fly, depth }) {
+function Badge({ item, index, dx, fly, depth, lastName }) {
+  const fullName = lastName ? `${item.n} ${lastName}` : item.n;
   const rot = depth === 0 ? dx * 0.05 : 0;
   const lift = depth * 10;
   const scale = 1 - depth * 0.04;
@@ -197,13 +255,13 @@ function Badge({ item, index, dx, fly, depth }) {
             fontFamily: display,
             fontWeight: 700,
             color: C.ink,
-            fontSize: item.n.length > 9 ? 62 : item.n.length > 6 ? 74 : 86,
+            fontSize: fullName.length > 18 ? 40 : fullName.length > 14 ? 50 : fullName.length > 9 ? 62 : fullName.length > 6 ? 74 : 86,
             lineHeight: 1,
             textAlign: "center",
             transform: "rotate(-1.5deg)",
           }}
         >
-          {item.n}
+          {fullName}
         </div>
 
         {/* stamps */}
@@ -287,7 +345,7 @@ export default function BabyNameSwipe() {
 
   const picks = state?.people?.[who]?.picks || {};
 
-  const pool = NAMES;
+  const pool = poolFor(state?.genderFilter);
 
   // rebuild deck when the filter or the swiper changes
   useEffect(() => {
@@ -306,8 +364,8 @@ export default function BabyNameSwipe() {
   const matches = useMemo(() => {
     if (!state) return [];
     const [a, b] = state.people;
-    return NAMES.filter((x) => a.picks[x.n] === "keep" && b.picks[x.n] === "keep");
-  }, [state]);
+    return pool.filter((x) => a.picks[x.n] === "keep" && b.picks[x.n] === "keep");
+  }, [state, pool]);
 
   const decide = useCallback(
     (dir) => {
@@ -377,7 +435,7 @@ export default function BabyNameSwipe() {
     else setDx(0);
   };
 
-  const keeps = NAMES.filter((x) => picks[x.n] === "keep");
+  const keeps = pool.filter((x) => picks[x.n] === "keep");
   const remaining = Math.max(deck.length - i, 0);
   const visible = deck.slice(i, i + 3);
   const label = state?.people?.[who]?.label || "";
@@ -389,19 +447,6 @@ export default function BabyNameSwipe() {
     next.people[who].label = v.slice(0, 14);
     persist(next);
   };
-
-  const chip = (active) => ({
-    fontFamily: ui,
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: "0.14em",
-    padding: "7px 12px",
-    borderRadius: 999,
-    cursor: "pointer",
-    border: `1px solid ${active ? C.ink : "rgba(22,32,43,0.2)"}`,
-    background: active ? C.ink : "transparent",
-    color: active ? "#fff" : "rgba(22,32,43,0.65)",
-  });
 
   const round = (bg, brd, size) => ({
     width: size,
@@ -444,127 +489,173 @@ export default function BabyNameSwipe() {
       `}</style>
 
       <div style={{ width: "100%", maxWidth: 380, height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}>
-        {/* header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexShrink: 0 }}>
-          <div>
-            <div style={{ fontSize: 10, letterSpacing: "0.3em", opacity: 0.55 }}>SWIPING AS</div>
-            <button
-              onClick={renameSwiper}
-              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: display, fontSize: 30, fontWeight: 700, color: C.ink, lineHeight: 1 }}
-            >
-              {label || "—"}
-            </button>
+        {!ready || !state ? (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, opacity: 0.55 }}>
+            Loading…
           </div>
-          <div style={{ display: "flex", gap: 6 }}>
-            {[0, 1].map((k) => (
-              <button key={k} onClick={() => setWho(k)} style={chip(who === k)}>
-                {(state?.people?.[k]?.label || `P${k + 1}`).toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* filters */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap", flexShrink: 0 }}>
-          <button onClick={() => setView(view === "swipe" ? "list" : "swipe")} style={{ ...chip(view === "list"), marginLeft: "auto" }}>
-            {view === "swipe" ? `LIST · ${matches.length}` : "BACK"}
-          </button>
-        </div>
-
-        {view === "swipe" ? (
+        ) : !state.onboarded ? (
+          <Welcome
+            onSubmit={(vals) => {
+              persist({
+                people: [
+                  { label: vals.yourName || "Parent 1", picks: {} },
+                  { label: vals.partnerName || "Partner", picks: {} },
+                ],
+                lastName: vals.lastName,
+                genderFilter: vals.genderFilter,
+                onboarded: true,
+              });
+            }}
+          />
+        ) : (
           <>
-            {/* card stack */}
-            <div
-              style={{ position: "relative", flex: 1, minHeight: 0, marginBottom: 22 }}
-              onPointerDown={onDown}
-              onPointerMove={onMove}
-              onPointerUp={onUp}
-              onPointerCancel={onUp}
-            >
-              {!ready ? (
-                <Empty text="Loading your picks…" />
-              ) : visible.length === 0 ? (
-                <Empty
-                  text={
-                    keeps.length
-                      ? `Deck's done. ${keeps.length} kept — check the list.`
-                      : "No names left in this filter. Try another one."
-                  }
-                />
-              ) : (
-                visible
-                  .map((item, d) => (
-                    <div key={item.n} className={d === 0 && dragRef.current.active ? "" : ""}>
-                      <Badge
-                        item={item}
-                        index={`${i + 1} / ${deck.length}`}
-                        dx={d === 0 ? dx : 0}
-                        fly={d === 0 ? fly : null}
-                        depth={d}
-                      />
-                    </div>
-                  ))
-                  .reverse()
+            {/* header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexShrink: 0 }}>
+              <div>
+                <div style={{ fontSize: 10, letterSpacing: "0.3em", opacity: 0.55 }}>SWIPING AS</div>
+                <button
+                  onClick={renameSwiper}
+                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: display, fontSize: 30, fontWeight: 700, color: C.ink, lineHeight: 1 }}
+                >
+                  {label || "—"}
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {[0, 1].map((k) => (
+                  <button key={k} onClick={() => setWho(k)} style={chip(who === k)}>
+                    {(state?.people?.[k]?.label || `P${k + 1}`).toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* filters */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap", flexShrink: 0 }}>
+              <button onClick={() => setView(view === "settings" ? "swipe" : "settings")} style={chip(view === "settings")} aria-label="Settings">
+                ⚙
+              </button>
+              {view !== "settings" && (
+                <button onClick={() => setView(view === "swipe" ? "list" : "swipe")} style={{ ...chip(view === "list"), marginLeft: "auto" }}>
+                  {view === "swipe" ? `LIST · ${matches.length}` : "BACK"}
+                </button>
               )}
             </div>
 
-            {/* controls */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, flexShrink: 0 }}>
-              <button onClick={() => decide("pass")} style={{ ...round(C.card, C.no, 62), color: C.no, fontSize: 24 }} aria-label="Pass">✕</button>
-              <button onClick={undo} disabled={!history.length} style={{ ...round("transparent", "rgba(22,32,43,0.25)", 44), color: "rgba(22,32,43,0.5)", fontSize: 15, opacity: history.length ? 1 : 0.35, boxShadow: "none" }} aria-label="Undo">↺</button>
-              <button onClick={() => decide("like")} style={{ ...round(C.card, C.yes, 62), color: C.yes, fontSize: 24 }} aria-label="Keep">♥</button>
-            </div>
+            {view === "settings" ? (
+              <SettingsView
+                initial={{
+                  yourName: state.people?.[0]?.label || "",
+                  partnerName: state.people?.[1]?.label || "",
+                  lastName: state.lastName || "",
+                  genderFilter: state.genderFilter || "girl",
+                }}
+                onSave={(vals) => {
+                  const next = structuredClone(state);
+                  next.people[0].label = vals.yourName || "Parent 1";
+                  next.people[1].label = vals.partnerName || "Partner";
+                  next.lastName = vals.lastName;
+                  next.genderFilter = vals.genderFilter;
+                  persist(next);
+                  setView("swipe");
+                }}
+                onBack={() => setView("swipe")}
+              />
+            ) : view === "swipe" ? (
+              <>
+                {/* card stack */}
+                <div
+                  style={{ position: "relative", flex: 1, minHeight: 0, marginBottom: 22 }}
+                  onPointerDown={onDown}
+                  onPointerMove={onMove}
+                  onPointerUp={onUp}
+                  onPointerCancel={onUp}
+                >
+                  {visible.length === 0 ? (
+                    <Empty
+                      text={
+                        keeps.length
+                          ? `Deck's done. ${keeps.length} kept — check the list.`
+                          : "No names left in this filter. Try another one."
+                      }
+                    />
+                  ) : (
+                    visible
+                      .map((item, d) => (
+                        <div key={item.n} className={d === 0 && dragRef.current.active ? "" : ""}>
+                          <Badge
+                            item={item}
+                            index={`${i + 1} / ${deck.length}`}
+                            dx={d === 0 ? dx : 0}
+                            fly={d === 0 ? fly : null}
+                            depth={d}
+                            lastName={state.lastName}
+                          />
+                        </div>
+                      ))
+                      .reverse()
+                  )}
+                </div>
 
-            <div style={{ textAlign: "center", marginTop: 14, fontSize: 11, letterSpacing: "0.18em", opacity: 0.5, flexShrink: 0 }}>
-              {remaining} LEFT · {keeps.length} KEPT · {matches.length} MATCHES
-            </div>
-            {status === "offline" && (
-              <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.band, letterSpacing: "0.06em", flexShrink: 0 }}>
-                Not saving. Open the list and copy a backup before you close this.
+                {/* controls */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, flexShrink: 0 }}>
+                  <button onClick={() => decide("pass")} style={{ ...round(C.card, C.no, 62), color: C.no, fontSize: 24 }} aria-label="Pass">✕</button>
+                  <button onClick={undo} disabled={!history.length} style={{ ...round("transparent", "rgba(22,32,43,0.25)", 44), color: "rgba(22,32,43,0.5)", fontSize: 15, opacity: history.length ? 1 : 0.35, boxShadow: "none" }} aria-label="Undo">↺</button>
+                  <button onClick={() => decide("like")} style={{ ...round(C.card, C.yes, 62), color: C.yes, fontSize: 24 }} aria-label="Keep">♥</button>
+                </div>
+
+                <div style={{ textAlign: "center", marginTop: 14, fontSize: 11, letterSpacing: "0.18em", opacity: 0.5, flexShrink: 0 }}>
+                  {remaining} LEFT · {keeps.length} KEPT · {matches.length} MATCHES
+                </div>
+                {status === "offline" && (
+                  <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.band, letterSpacing: "0.06em", flexShrink: 0 }}>
+                    Not saving. Open the list and copy a backup before you close this.
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }}>
+                <ListView
+                  matches={matches}
+                  keeps={keeps}
+                  label={label}
+                  lastName={state.lastName}
+                  onCopy={() => {
+                    const text = JSON.stringify(state);
+                    try {
+                      navigator.clipboard.writeText(text);
+                      setToast("copied");
+                      setTimeout(() => setToast(null), 1800);
+                    } catch {
+                      window.prompt("Copy this and keep it somewhere safe:", text);
+                    }
+                  }}
+                  onRestore={() => {
+                    const raw = window.prompt("Paste a backup to restore:");
+                    if (!raw) return;
+                    try {
+                      const parsed = JSON.parse(raw);
+                      if (!Array.isArray(parsed?.people)) throw new Error("bad shape");
+                      persist(parsed);
+                      setDeck(pool.filter((x) => !parsed.people[who].picks[x.n]));
+                      setI(0);
+                      setHistory([]);
+                    } catch {
+                      window.alert("That didn't look like a backup from this app.");
+                    }
+                  }}
+                  onReset={() => {
+                    if (!window.confirm(`Clear all of ${label}'s picks?`)) return;
+                    const next = structuredClone(state);
+                    next.people[who].picks = {};
+                    persist(next);
+                    setDeck(pool);
+                    setI(0);
+                    setHistory([]);
+                  }}
+                />
               </div>
             )}
           </>
-        ) : (
-          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }}>
-            <ListView
-              matches={matches}
-              keeps={keeps}
-              label={label}
-              onCopy={() => {
-                const text = JSON.stringify(state);
-                try {
-                  navigator.clipboard.writeText(text);
-                  setToast("copied");
-                  setTimeout(() => setToast(null), 1800);
-                } catch {
-                  window.prompt("Copy this and keep it somewhere safe:", text);
-                }
-              }}
-              onRestore={() => {
-                const raw = window.prompt("Paste a backup to restore:");
-                if (!raw) return;
-                try {
-                  const parsed = JSON.parse(raw);
-                  if (!Array.isArray(parsed?.people)) throw new Error("bad shape");
-                  persist(parsed);
-                  setDeck(pool.filter((x) => !parsed.people[who].picks[x.n]));
-                  setI(0);
-                  setHistory([]);
-                } catch {
-                  window.alert("That didn't look like a backup from this app.");
-                }
-              }}
-              onReset={() => {
-                if (!window.confirm(`Clear all of ${label}'s picks?`)) return;
-                const next = structuredClone(state);
-                next.people[who].picks = {};
-                persist(next);
-                setDeck(pool);
-                setI(0);
-                setHistory([]);
-              }}
-            />
-          </div>
         )}
       </div>
 
@@ -662,7 +753,7 @@ function Empty({ text }) {
   );
 }
 
-function ListView({ matches, keeps, label, onReset, onCopy, onRestore }) {
+function ListView({ matches, keeps, label, lastName, onReset, onCopy, onRestore }) {
   const Row = ({ n, gold }) => (
     <div
       style={{
@@ -675,7 +766,10 @@ function ListView({ matches, keeps, label, onReset, onCopy, onRestore }) {
         border: `1px solid ${gold ? "rgba(201,150,43,0.55)" : C.rule}`,
       }}
     >
-      <span style={{ fontFamily: display, fontSize: 30, lineHeight: 1 }}>{n}</span>
+      <span style={{ fontFamily: display, fontSize: 30, lineHeight: 1 }}>
+        {n}
+        {lastName ? <span style={{ opacity: 0.55 }}> {lastName}</span> : null}
+      </span>
     </div>
   );
 
@@ -729,6 +823,142 @@ function ListView({ matches, keeps, label, onReset, onCopy, onRestore }) {
 function SectionTitle({ children }) {  return (
     <div style={{ fontSize: 10, letterSpacing: "0.28em", opacity: 0.5, margin: "0 0 10px", textTransform: "uppercase" }}>
       {children}
+    </div>
+  );
+}
+
+/* ---------------- profile / onboarding ---------------- */
+
+const fieldLabel = {
+  fontSize: 11,
+  letterSpacing: "0.16em",
+  opacity: 0.6,
+  marginBottom: 6,
+  display: "block",
+};
+
+const fieldInput = {
+  width: "100%",
+  padding: "12px 14px",
+  borderRadius: 10,
+  border: `1px solid ${C.rule}`,
+  background: C.card,
+  color: C.ink,
+  fontFamily: ui,
+  fontSize: 15,
+  boxSizing: "border-box",
+};
+
+function ProfileForm({ initial, submitLabel, onSubmit, onCancel }) {
+  const [yourName, setYourName] = useState(initial.yourName || "");
+  const [partnerName, setPartnerName] = useState(initial.partnerName || "");
+  const [lastName, setLastName] = useState(initial.lastName || "");
+  const [genderFilter, setGenderFilter] = useState(initial.genderFilter || "girl");
+
+  const canSubmit = yourName.trim().length > 0;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div>
+        <label style={fieldLabel}>YOUR NAME</label>
+        <input
+          style={fieldInput}
+          value={yourName}
+          onChange={(e) => setYourName(e.target.value)}
+          placeholder="Your name"
+          maxLength={14}
+        />
+      </div>
+      <div>
+        <label style={fieldLabel}>PARTNER'S NAME (OPTIONAL)</label>
+        <input
+          style={fieldInput}
+          value={partnerName}
+          onChange={(e) => setPartnerName(e.target.value)}
+          placeholder="Partner's name"
+          maxLength={14}
+        />
+      </div>
+      <div>
+        <label style={fieldLabel}>LAST NAME (OPTIONAL)</label>
+        <input
+          style={fieldInput}
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          placeholder="Shown on the card"
+          maxLength={24}
+        />
+      </div>
+      <div>
+        <label style={fieldLabel}>NAMES TO SHOW</label>
+        <div style={{ display: "flex", gap: 8 }}>
+          {[["girl", "GIRL"], ["boy", "BOY"], ["both", "BOTH"]].map(([val, lab]) => (
+            <button
+              key={val}
+              onClick={() => setGenderFilter(val)}
+              style={{ ...chip(genderFilter === val), flex: 1, textAlign: "center" }}
+            >
+              {lab}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        {onCancel && (
+          <button onClick={onCancel} style={ghost}>
+            CANCEL
+          </button>
+        )}
+        <button
+          onClick={() =>
+            onSubmit({
+              yourName: yourName.trim(),
+              partnerName: partnerName.trim(),
+              lastName: lastName.trim(),
+              genderFilter,
+            })
+          }
+          disabled={!canSubmit}
+          style={{
+            flex: 2,
+            padding: "12px",
+            borderRadius: 10,
+            border: "none",
+            background: canSubmit ? C.ink : "rgba(22,32,43,0.3)",
+            color: "#fff",
+            fontFamily: ui,
+            fontWeight: 700,
+            fontSize: 13,
+            letterSpacing: "0.12em",
+            cursor: canSubmit ? "pointer" : "not-allowed",
+          }}
+        >
+          {submitLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Welcome({ onSubmit }) {
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 24 }}>
+      <div>
+        <div style={{ fontFamily: display, fontSize: 44, lineHeight: 1 }}>Welcome</div>
+        <p style={{ fontSize: 13, opacity: 0.65, marginTop: 10, lineHeight: 1.6 }}>
+          Quick setup before you start swiping. This is saved on this device only.
+        </p>
+      </div>
+      <ProfileForm initial={{}} submitLabel="START SWIPING" onSubmit={onSubmit} />
+    </div>
+  );
+}
+
+function SettingsView({ initial, onSave, onBack }) {
+  return (
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }}>
+      <SectionTitle>Settings</SectionTitle>
+      <ProfileForm initial={initial} submitLabel="SAVE" onSubmit={onSave} onCancel={onBack} />
     </div>
   );
 }
