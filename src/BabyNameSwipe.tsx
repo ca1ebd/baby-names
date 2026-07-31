@@ -203,12 +203,18 @@ function Badge({ item, dx, fly, depth, lastName }) {
         transform,
         opacity: fly && depth === 0 ? 0 : 1,
         zIndex: 10 - depth,
-        borderRadius: 20,
-        boxShadow: "0 8px 28px rgba(22,32,43,0.18)",
         touchAction: "none",
         willChange: "transform",
       }}
     >
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          borderRadius: 20,
+          boxShadow: "0 8px 28px rgba(22,32,43,0.18)",
+        }}
+      >
       <div
         style={{
           width: "100%",
@@ -332,6 +338,7 @@ function Badge({ item, dx, fly, depth, lastName }) {
         >
           NOPE
         </div>
+      </div>
       </div>
       </div>
     </div>
