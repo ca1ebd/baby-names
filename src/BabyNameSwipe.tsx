@@ -418,7 +418,7 @@ export default function BabyNameSwipe() {
   // keyboard
   useEffect(() => {
     const onKey = (e) => {
-      if (view !== "swipe") return;
+      if (!state?.onboarded || view !== "swipe") return;
       if (e.key === "ArrowRight") decide("like");
       else if (e.key === "ArrowLeft") decide("pass");
       else if (e.key === "Backspace") {
@@ -428,7 +428,7 @@ export default function BabyNameSwipe() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [decide, undo, view]);
+  }, [decide, undo, view, state?.onboarded]);
 
   const onDown = (e) => {
     if (fly) return;
