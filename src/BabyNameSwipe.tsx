@@ -949,7 +949,6 @@ function FloatingField({ label, value, onChange, maxLength }) {
           transform: floated ? "none" : "translateY(-50%)",
           fontSize: floated ? 11 : 16,
           fontWeight: 600,
-          letterSpacing: floated ? "0.14em" : 0,
           color: floated ? "rgba(22,32,43,0.6)" : "rgba(22,32,43,0.4)",
           pointerEvents: "none",
         }}
@@ -984,9 +983,9 @@ function useProfileFields(initial) {
 function ProfileFields({ f }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
-      <FloatingField label="YOUR NAME" value={f.yourName} onChange={f.setYourName} maxLength={14} />
-      <FloatingField label="PARTNER'S NAME (OPTIONAL)" value={f.partnerName} onChange={f.setPartnerName} maxLength={14} />
-      <FloatingField label="LAST NAME (OPTIONAL)" value={f.lastName} onChange={f.setLastName} maxLength={24} />
+      <FloatingField label="Your Name" value={f.yourName} onChange={f.setYourName} maxLength={14} />
+      <FloatingField label="Partner's Name" value={f.partnerName} onChange={f.setPartnerName} maxLength={14} />
+      <FloatingField label="Last Name" value={f.lastName} onChange={f.setLastName} maxLength={24} />
       <div style={{ minWidth: 0 }}>
         <label style={fieldLabel}>NAMES TO SHOW</label>
         <div style={{ display: "flex", gap: 8, minWidth: 0 }}>
