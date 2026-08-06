@@ -489,8 +489,9 @@ export default function BabyNameSwipe() {
         button:focus-visible, [role=button]:focus-visible { outline: 2px solid ${C.ink}; outline-offset: 3px; }
         input::placeholder { color: rgba(22,32,43,0.4); }
         input:focus { outline: none; border-color: ${C.ink} !important; box-shadow: 0 0 0 3px rgba(22,32,43,0.12) !important; }
+        .field-label { transition: top .18s cubic-bezier(.2,.8,.3,1), font-size .18s cubic-bezier(.2,.8,.3,1), color .18s ease; }
         @media (prefers-reduced-motion: reduce) {
-          .swipe-card, .seg-thumb { transition-duration: .01ms !important; }
+          .swipe-card, .seg-thumb, .field-label { transition-duration: .01ms !important; }
         }
       `}</style>
 
@@ -920,6 +921,45 @@ const fieldInput = {
   boxSizing: "border-box",
 };
 
+let floatingFieldId = 0;
+
+function FloatingField({ label, value, onChange, maxLength }) {
+  const [id] = useState(() => `field-${++floatingFieldId}`);
+  const [focused, setFocused] = useState(false);
+  const floated = focused || value.length > 0;
+
+  return (
+    <div style={{ position: "relative", minWidth: 0 }}>
+      <input
+        id={id}
+        style={{ ...fieldInput, paddingTop: 20, paddingBottom: 6 }}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        maxLength={maxLength}
+      />
+      <label
+        htmlFor={id}
+        className="field-label"
+        style={{
+          position: "absolute",
+          left: 14,
+          top: floated ? 7 : "50%",
+          transform: floated ? "none" : "translateY(-50%)",
+          fontSize: floated ? 11 : 16,
+          fontWeight: 600,
+          letterSpacing: floated ? "0.14em" : 0,
+          color: floated ? "rgba(22,32,43,0.6)" : "rgba(22,32,43,0.4)",
+          pointerEvents: "none",
+        }}
+      >
+        {label}
+      </label>
+    </div>
+  );
+}
+
 function useProfileFields(initial) {
   const [yourName, setYourName] = useState(initial.yourName || "");
   const [partnerName, setPartnerName] = useState(initial.partnerName || "");
@@ -944,36 +984,9 @@ function useProfileFields(initial) {
 function ProfileFields({ f }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
-      <div style={{ minWidth: 0 }}>
-        <label style={fieldLabel}>YOUR NAME</label>
-        <input
-          style={fieldInput}
-          value={f.yourName}
-          onChange={(e) => f.setYourName(e.target.value)}
-          placeholder="Your name"
-          maxLength={14}
-        />
-      </div>
-      <div style={{ minWidth: 0 }}>
-        <label style={fieldLabel}>PARTNER'S NAME (OPTIONAL)</label>
-        <input
-          style={fieldInput}
-          value={f.partnerName}
-          onChange={(e) => f.setPartnerName(e.target.value)}
-          placeholder="Partner's name"
-          maxLength={14}
-        />
-      </div>
-      <div style={{ minWidth: 0 }}>
-        <label style={fieldLabel}>LAST NAME (OPTIONAL)</label>
-        <input
-          style={fieldInput}
-          value={f.lastName}
-          onChange={(e) => f.setLastName(e.target.value)}
-          placeholder="Shown on the card"
-          maxLength={24}
-        />
-      </div>
+      <FloatingField label="YOUR NAME" value={f.yourName} onChange={f.setYourName} maxLength={14} />
+      <FloatingField label="PARTNER'S NAME (OPTIONAL)" value={f.partnerName} onChange={f.setPartnerName} maxLength={14} />
+      <FloatingField label="LAST NAME (OPTIONAL)" value={f.lastName} onChange={f.setLastName} maxLength={24} />
       <div style={{ minWidth: 0 }}>
         <label style={fieldLabel}>NAMES TO SHOW</label>
         <div style={{ display: "flex", gap: 8, minWidth: 0 }}>
