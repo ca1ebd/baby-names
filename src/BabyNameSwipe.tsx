@@ -1035,8 +1035,8 @@ function useProfileFields(initial) {
 function ProfileFields({ f }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
-      <FloatingField label="Your Name" value={f.yourName} onChange={f.setYourName} maxLength={20} />
-      <FloatingField label="Partner's Name" value={f.partnerName} onChange={f.setPartnerName} maxLength={20} />
+      <FloatingField label="Your Name" value={f.yourName} onChange={f.setYourName} maxLength={15} />
+      <FloatingField label="Partner's Name" value={f.partnerName} onChange={f.setPartnerName} maxLength={15} />
       <FloatingField label="Last Name" value={f.lastName} onChange={f.setLastName} maxLength={24} />
       <div style={{ minWidth: 0 }}>
         <label style={fieldLabel}>NAMES TO SHOW</label>
