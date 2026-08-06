@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Ported as-is from the JS prototype; not worth retyping a component this dynamic.
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from "react";
 import { useUpdateCheck } from "./lib/useUpdateCheck";
 
 /* ---------------- data ---------------- */
@@ -101,6 +101,77 @@ const chip = (active) => ({
 });
 
 /* ---------------- helpers ---------------- */
+
+let segMeasureCtx = null;
+
+// Shrinks a segmented-control label to whatever font size actually fits its
+// rendered width, measured with canvas — a fixed char-count threshold can't
+// tell "MMM" from "iii", and this control is too narrow to guess wrong.
+function useFitSegLabel(ref, text) {
+  const [style, setStyle] = useState({ fontSize: 12, letterSpacing: "0.08em" });
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || !text) return;
+    const cs = getComputedStyle(el);
+    const available = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    if (!available) return;
+    if (!segMeasureCtx) segMeasureCtx = document.createElement("canvas").getContext("2d");
+
+    const fits = (size, trackingEm) => {
+      segMeasureCtx.font = `700 ${size}px ${ui}`;
+      const w = segMeasureCtx.measureText(text).width + trackingEm * size * (text.length - 1);
+      return w <= available;
+    };
+
+    if (fits(12, 0.08)) {
+      setStyle({ fontSize: 12, letterSpacing: "0.08em" });
+      return;
+    }
+    for (let size = 11.5; size >= 7.5; size -= 0.5) {
+      if (fits(size, 0)) {
+        setStyle({ fontSize: size, letterSpacing: 0 });
+        return;
+      }
+    }
+    setStyle({ fontSize: 7.5, letterSpacing: 0 });
+  }, [text]);
+
+  return style;
+}
+
+function SegButton({ label, active, onClick }) {
+  const ref = useRef(null);
+  const { fontSize, letterSpacing } = useFitSegLabel(ref, label);
+
+  return (
+    <button
+      ref={ref}
+      onClick={onClick}
+      style={{
+        position: "relative",
+        zIndex: 1,
+        flex: "1 1 0",
+        minWidth: 0,
+        padding: "8px 8px",
+        border: "none",
+        background: "transparent",
+        color: active ? "#fff" : "rgba(22,32,43,0.75)",
+        fontFamily: ui,
+        fontWeight: 600,
+        fontSize,
+        letterSpacing,
+        cursor: "pointer",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        transition: "color .2s ease, font-size .1s ease",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
 
 function useStore() {
   const [state, setState] = useState(null);
@@ -579,31 +650,12 @@ export default function BabyNameSwipe() {
                     }}
                   />
                   {[0, 1].map((k) => (
-                    <button
+                    <SegButton
                       key={k}
+                      label={(state?.people?.[k]?.label || `P${k + 1}`).toUpperCase()}
+                      active={who === k}
                       onClick={() => setWho(k)}
-                      style={{
-                        position: "relative",
-                        zIndex: 1,
-                        flex: "1 1 0",
-                        minWidth: 0,
-                        padding: "8px 12px",
-                        border: "none",
-                        background: "transparent",
-                        color: who === k ? "#fff" : "rgba(22,32,43,0.75)",
-                        fontFamily: ui,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        letterSpacing: "0.08em",
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        transition: "color .2s ease",
-                      }}
-                    >
-                      {(state?.people?.[k]?.label || `P${k + 1}`).toUpperCase()}
-                    </button>
+                    />
                   ))}
                 </div>
               </div>
@@ -983,8 +1035,8 @@ function useProfileFields(initial) {
 function ProfileFields({ f }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
-      <FloatingField label="Your Name" value={f.yourName} onChange={f.setYourName} maxLength={14} />
-      <FloatingField label="Partner's Name" value={f.partnerName} onChange={f.setPartnerName} maxLength={14} />
+      <FloatingField label="Your Name" value={f.yourName} onChange={f.setYourName} maxLength={15} />
+      <FloatingField label="Partner's Name" value={f.partnerName} onChange={f.setPartnerName} maxLength={15} />
       <FloatingField label="Last Name" value={f.lastName} onChange={f.setLastName} maxLength={24} />
       <div style={{ minWidth: 0 }}>
         <label style={fieldLabel}>NAMES TO SHOW</label>
