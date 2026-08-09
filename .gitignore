@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Downloaded SSA source archive for the name corpus (7.5 MB) — only the
+# generated src/lib/nameCorpus.ts is committed.
+.corpus-cache/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
