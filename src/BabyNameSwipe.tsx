@@ -2,24 +2,15 @@
 // Ported as-is from the JS prototype; not worth retyping a component this dynamic.
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from "react";
 import { useUpdateCheck } from "./lib/useUpdateCheck";
+import { GIRL_CORPUS, BOY_CORPUS } from "./lib/nameCorpus";
 
 /* ---------------- data ---------------- */
 
-const RAW = {
-  girl: {
-    c: ["Abigail","Adeline","Alice","Amelia","Anna","Audrey","Ava","Brooke","Caroline","Cecilia","Charlotte","Chloe","Claire","Clara","Eleanor","Elizabeth","Ella","Emily","Emma","Evelyn","Genevieve","Grace","Hannah","Hazel","Isabella","Josephine","Julia","Juliet","Katherine","Lauren","Leah","Lillian","Lucy","Madeline","Maggie","Margaret","Mia","Molly","Natalie","Nora","Olivia","Paige","Rachel","Rose","Sadie","Sarah","Sophia","Stella","Violet","Vivian",
-        "Addison","Alexandra","Allison","Amanda","Amy","Andrea","Angela","Annabelle","Annie","April","Ashley","Aubrey","Autumn","Beatrice","Bella","Bridget","Brooklyn","Camille","Carly","Cassandra","Catherine","Chelsea","Christina","Cora","Cordelia","Courtney","Daisy","Danielle","Daphne","Delaney","Delilah","Diana","Eden","Edith","Elena","Eliza","Elise","Ellie","Eloise","Elsie","Erin","Esther","Eva","Faith","Fiona","Florence","Gabrielle","Georgia","Gwendolyn","Harriet","Heidi","Helen","Holly","Hope","Iris","Isla","Ivy","Jane","Jenna","Jessica","Joy","Kate","Kayla","Kelsey","Laura","Lena","Lila","Louisa","Lydia","Mabel","Madison","Mallory","Mary","Matilda","Maya","Megan","Meredith","Miriam","Naomi","Nicole","Ophelia","Penelope","Phoebe","Rebecca","Rosalie","Rosemary","Ruby","Ruth","Savannah","Scarlett","Serena","Sienna","Summer","Sylvia","Tessa","Vanessa","Veronica","Victoria","Willa","Zoe",
-        "Aaliyah","Adele","Adelina","Adelaide","Agatha","Agnes","Alba","Alina","Alma","Amara","Amber","Anastasia","Angelina","Anita","Annalise","Annika","Antonia","Ariadne","Ariana","Arielle","Arlene","Astrid","Athena","Aurelia","Aurora","Beatrix","Bernadette","Bianca","Blanche","Blythe","Briar","Brielle","Brigid","Camilla","Candace","Carina","Carmen","Carol","Carolina","Cassia","Catalina","Celeste","Celia","Charissa","Chiara","Clarissa","Claudia","Clementine","Colette","Constance","Cornelia","Cressida","Crystal","Edwina","Elaina","Elaine","Electra","Elin","Elinor","Elissa","Eliana","Elowen","Elyse","Emmeline","Enid","Estelle","Etta","Eugenia","Eunice","Evangeline","Evanna","Fatima","Fern","Fernanda","Filippa","Flora","Frances","Francesca","Freya","Gemma","Georgina","Geraldine","Gianna","Gigi","Gilda","Ginger","Gloria","Golda","Greta","Griselda","Guinevere","Gwen","Gwyneth","Hedda","Helena","Henrietta","Hermione","Hester","Hilda","Honora","Ida","Ilana","Ilse","Imani","Imogen","Ines","Ingrid","Iolanthe","Irene","Irina","Isabel","Isadora","Isolde","Jacinta","Jacqueline","Jael","Jamila","Janelle","Janet","Janice","Jasmine","Jean","Jeanette","Jemima","Jennifer","Jill","Jocelyn","Jolene","Jonquil","Jordana","Juanita","Judith","Julianne","Juniper","Justine","Karina","Karis","Kassandra","Katia","Keziah","Kiera","Kirsten","Klara","Kyra","Laila","Lana","Lara","Larissa","Laurel","Lavinia"],
-    u: ["Arden","Avery","Blair","Blakely","Campbell","Charlie","Ellis","Emerson","Emery","Everly","Finley","Frankie","Greer","Hadley","Harper","Hayden","Hollis","Kennedy","Landry","Larkin","Lennon","Logan","London","Marlowe","Merritt","Monroe","Oakley","Palmer","Parker","Peyton","Presley","Quinn","Reagan","Reese","Remi","Riley","Ripley","Rory","Rowan","Sawyer","Scout","Shea","Sloane","Spencer","Sutton","Sydney","Tatum","Teagan","Winter","Wren",
-        "Arlo","Aspen","Bowen","Brecken","Briggs","Callan","Carson","Cove","Easton","Elliot","Emberlynn","Ember","Fallon","Fox","Griffin","Harlow","Haven","Indigo","Jagger","Jules","Justice","Kai","Karsyn","Keegan","Lake","Lark","Legend","Lincoln","Marlow","Maverick","Milan","North","Onyx","Phoenix","Piper","River","Salem","Saylor","Sloan","True","Vale","West","Wilder","Zion","Aubree","Blaise","Brynlee","Cairo","Cassius","Cedar"],
-  },
-  boy: {
-    c: ["Abner","Alaric","Alden","Alfred","Alonzo","Amos","Anatole","Angelo","Ansel","Archibald","Armand","Arnold","Aristotle","Arno","Baldwin","Barrett","Bertram","Blaine","Bram","Burke","Cain","Callum","Casimir","Cato","Cecil","Clarence","Corbin","Corwin","Elton","Emil","Errol","Everett","Ewan","Fabius","Faust","Ferris","Finch","Finnian","Flint","Floyd","Fraser","Gerald","Gerard","Gordon","Griffith","Harlan","Harmon","Hobart","Ike","Isham","Ivor","Jarvis","Jensen","Jorah","Kellan","Kip","Lambert","Lars","Leif","Lennox","Leon","Lex","Lior","Lloyd","Lorcan","Lucius","Manfred","Marlon","Maurice","Maynard","Merle","Mervin","Mick","Milton","Monte","Nestor","Newton","Niles","Nolan","Norbert","Norris","Odin","Ogden","Oren","Orville","Osmond","Pablo","Phil","Piers","Powell","Ragnar","Ramon","Rand","Ransom","Rawlins","Reece","Remus","Rene","Roald","Roscoe","Rowland","Rudyard","Sanford","Sargent","Selwyn","Severin","Silvio","Simeon","Sinclair","Skyler","Solon","Stellan","Tobin","Tremaine","Tucker","Tudor","Ulric","Upton","Vance","Vernon","Wallis","Walton","Warwick","Wilbur","Wilfred","Willem","Wilmer","Winfield","Woodrow","Wyndham","Xander","Yale","Zander","Zeb","Zebedee","Aaron","Abel","Abraham","Adrian","Alexander","Alistair","Ambrose","Anders","Andrew","Angus","Anselm","Archer","Arthur","Asher","Atlas","Augustus","Aurelio","Austin","Axel","Bartholomew","Basil","Baxter","Beckett","Benedict","Benjamin","Bennett","Bernard","Bishop","Blake","Boaz","Boris","Brendan","Brennan","Brett","Brian","Broderick","Bruno","Byron","Caesar","Caleb","Calvin","Camden","Carter","Cash","Cedric","Chance","Charles","Christian","Christopher","Clark","Claude","Clement","Clifford","Clive","Colton","Conrad","Constantine","Cormac","Cornelius","Cosmo","Crispin","Curtis","Cyrus","Earl","Edgar","Edmund","Edward","Edwin","Elias","Eli","Elijah","Elliott","Emmett","Enoch","Enzo","Ephraim","Erasmus","Eric","Ernest","Ethan","Eugene","Evan","Ezekiel","Ezra","Fabian","Felix","Fenwick","Ferdinand","Fergus","Finnegan","Fitzgerald","Fletcher","Flynn","Forrest","Francis","Franklin","Frederick","Gabriel","Gareth","Garrison","Gavin","Gideon","Gilbert","Giles","Graham","Grant","Grover","Gulliver","Gunner","Gus","Hamilton","Hamish","Harold","Harrison","Hector","Herbert","Hezekiah","Hiram","Homer","Horace","Howard","Hudson","Hugh","Hugo","Ian","Ignatius","Ingram","Ira","Irving","Isaac","Isaiah","Ivan","Jack","Jackson","Jacob","James","Jared","Jason","Jasper","Jerome","Jesse","Jethro","Job","Joel","Jonah","Jonas","Jonathan","Joseph","Joshua","Judah","Jude","Julian","Julius","Justin","Kenneth","Kingston","Klaus","Knox","Konrad","Lachlan","Lawrence","Lazarus","Leo","Leonard","Leopold","Levi","Lewis","Linus","Lionel","Llewellyn","Lorenzo","Louis","Lucas","Lucian","Ludwig","Magnus","Malachi","Malcolm","Marcus","Mark","Marshall","Martin","Marvin","Mason","Mathias","Matthew","Maximilian","Maxwell","Merrick","Micah","Michael","Miles"],
-    u: ["Ace","Ash","Bear","Bo","Boone","Bodhi","Brice","Brooks","Cal","Case","Cassian","Cliff","Colt","Crew","Cruz","Ellison","Fisher","Gage","Hawk","Holt","Huck","Hux","Jace","Jax","Jett","Kase","Kit","Knight","Lane","Rebel","Reign","Rome","Saint","Slater","Stetson","Stryker","Trace","Ranger","Reeve","Ridge","Rocco","Rock","Slate","Steel","Talon","Tex","Thatcher","Wolf","Beau","Cole","Cage","Chase","Emrys","Gunnar","Hank","Hoyt","Kade","Kayce","Keanu","Lev","Maddox","Nash","Nix","Rad","Rain","Raiden","Rio","Roan","Tanner","Wade","Wells","Wyatt","Zeke"],
-  },
-};
+// Names come from src/lib/nameCorpus.ts, generated from public SSA data by
+// scripts/build-name-corpus.mjs. Both lists are ordered by popularity (index
+// is the rank) and share no spellings, so a pick can never mean two names.
 
-// fixed-seed shuffle: styles interleave, and both parents see the same order
+// fixed-seed shuffle: both parents see the same order on every device
 function shuffled(list) {
   const a = [...list];
   let seed = 20260730;
@@ -31,20 +22,54 @@ function shuffled(list) {
   return a;
 }
 
-const GIRL_NAMES = shuffled([
-  ...RAW.girl.c.map((n) => ({ n, s: "c", g: "girl" })),
-  ...RAW.girl.u.map((n) => ({ n, s: "u", g: "girl" })),
-]);
-const BOY_NAMES = shuffled([
-  ...RAW.boy.c.map((n) => ({ n, s: "c", g: "boy" })),
-  ...RAW.boy.u.map((n) => ({ n, s: "u", g: "boy" })),
-]);
-const BOTH_NAMES = shuffled([...GIRL_NAMES, ...BOY_NAMES]);
+// Pools hold plain name strings, not objects — at ~106k names, materializing
+// { n, g } for the whole pool costs startup time and memory for no benefit.
+// The card object is built only for the two or three visible cards.
+// Membership sets cost ~19 ms to build over 106k names, so they are built on
+// first use rather than at module load — a fresh girl/boy swiper never needs
+// them, and paying for them would delay the first card.
+let genderSets = null;
+
+function genderSetsOnce() {
+  if (!genderSets) {
+    genderSets = { girl: new Set(GIRL_CORPUS), boy: new Set(BOY_CORPUS) };
+  }
+  return genderSets;
+}
+
+// Returns undefined for a name that isn't in the corpus — which happens for
+// anything swiped before a corpus change. Those picks still count.
+function genderOf(name) {
+  const sets = genderSetsOnce();
+  if (sets.girl.has(name)) return "girl";
+  if (sets.boy.has(name)) return "boy";
+  return undefined;
+}
+
+// Whether a previously swiped name belongs in the list for the current filter.
+// A name the corpus no longer knows is always shown: it was really swiped, and
+// hiding it would silently drop a keep or a match.
+function inActiveView(name, genderFilter) {
+  if (genderFilter === "both") return true; // no lookup needed
+  const g = genderOf(name);
+  return !g || g === genderFilter;
+}
+
+// Built on first use and memoized: only the active filter's pool is ever
+// shuffled, instead of all three at module load.
+const poolCache = {};
 
 function poolFor(genderFilter) {
-  if (genderFilter === "boy") return BOY_NAMES;
-  if (genderFilter === "both") return BOTH_NAMES;
-  return GIRL_NAMES;
+  const key = genderFilter === "boy" || genderFilter === "both" ? genderFilter : "girl";
+  if (!poolCache[key]) {
+    poolCache[key] =
+      key === "boy"
+        ? shuffled(BOY_CORPUS)
+        : key === "both"
+          ? shuffled([...GIRL_CORPUS, ...BOY_CORPUS])
+          : shuffled(GIRL_CORPUS);
+  }
+  return poolCache[key];
 }
 
 // DO NOT CHANGE THIS KEY. Changing it orphans every saved swipe.
@@ -434,7 +459,7 @@ export default function BabyNameSwipe() {
   useEffect(() => {
     if (!ready) return;
     const p = state?.people?.[who]?.picks || {};
-    setDeck(pool.filter((x) => !p[x.n]));
+    setDeck(pool.filter((n) => !p[n]));
     setI(0);
     setDx(0);
     setFly(null);
@@ -444,24 +469,32 @@ export default function BabyNameSwipe() {
 
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
+  // Derived from picks rather than the pool: a name both parents kept must
+  // stay listed even if it is no longer in the corpus. Insertion order = the
+  // order it was swiped.
   const matches = useMemo(() => {
     if (!state) return [];
     const [a, b] = state.people;
-    return pool.filter((x) => a.picks[x.n] === "keep" && b.picks[x.n] === "keep");
-  }, [state, pool]);
+    return Object.keys(a.picks).filter(
+      (n) =>
+        a.picks[n] === "keep" &&
+        b.picks[n] === "keep" &&
+        inActiveView(n, state.genderFilter)
+    );
+  }, [state]);
 
   const decide = useCallback(
     (dir) => {
       if (fly || !state || i >= deck.length) return;
-      const item = deck[i];
+      const name = deck[i];
       const next = structuredClone(state);
-      next.people[who].picks[item.n] = dir === "like" ? "keep" : "no";
+      next.people[who].picks[name] = dir === "like" ? "keep" : "no";
       persist(next);
-      setHistory((h) => [...h, item.n]);
+      setHistory((h) => [...h, name]);
 
       const other = next.people[who === 0 ? 1 : 0];
-      if (dir === "like" && other.picks[item.n] === "keep") {
-        setToast(item.n);
+      if (dir === "like" && other.picks[name] === "keep") {
+        setToast(name);
         setTimeout(() => setToast(null), 2200);
       }
 
@@ -518,8 +551,13 @@ export default function BabyNameSwipe() {
     else setDx(0);
   };
 
-  const keeps = pool.filter((x) => picks[x.n] === "keep");
-  const visible = deck.slice(i, i + 3);
+  const keeps = Object.keys(picks).filter(
+    (n) => picks[n] === "keep" && inActiveView(n, state?.genderFilter)
+  );
+  // Card objects are built only for the handful of visible cards.
+  const visible = deck
+    .slice(i, i + 3)
+    .map((n) => ({ n, g: state?.genderFilter === "both" ? genderOf(n) : state?.genderFilter }));
   const label = state?.people?.[who]?.label || "";
 
   const round = (bg, brd, size) => ({
@@ -753,7 +791,7 @@ export default function BabyNameSwipe() {
                       const parsed = JSON.parse(raw);
                       if (!Array.isArray(parsed?.people)) throw new Error("bad shape");
                       persist(parsed);
-                      setDeck(pool.filter((x) => !parsed.people[who].picks[x.n]));
+                      setDeck(pool.filter((n) => !parsed.people[who].picks[n]));
                       setI(0);
                       setHistory([]);
                     } catch {
@@ -898,7 +936,7 @@ function ListView({ matches, keeps, label, onReset, onCopy, onRestore }) {
       <SectionTitle>Both said yes ({matches.length})</SectionTitle>
       {matches.length ? (
         <div style={{ display: "grid", gap: 8, marginBottom: 26 }}>
-          {matches.map((x) => <Row key={x.n} {...x} gold />)}
+          {matches.map((n) => <Row key={n} n={n} gold />)}
         </div>
       ) : (
         <p style={{ fontSize: 13, color: "rgba(22,32,43,0.72)", marginBottom: 26, lineHeight: 1.6 }}>
@@ -908,7 +946,7 @@ function ListView({ matches, keeps, label, onReset, onCopy, onRestore }) {
 
       <SectionTitle>{label}&apos;s keeps ({keeps.length})</SectionTitle>
       <div style={{ display: "grid", gap: 8 }}>
-        {keeps.map((x) => <Row key={x.n} {...x} />)}
+        {keeps.map((n) => <Row key={n} n={n} />)}
       </div>
 
       <div style={{ display: "flex", gap: 8, marginTop: 24 }}>
