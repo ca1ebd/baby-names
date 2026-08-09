@@ -2,6 +2,10 @@
 
 A two-person baby-naming app: each parent swipes through a shared name deck independently, and a "match" happens when both keep the same name. Single-page, mobile-first, no backend — everything lives in one device's browser storage.
 
+## No AI vendor attribution (non-negotiable)
+
+The words "Anthropic" and "Claude", any model name (Opus, Sonnet, Haiku, Fable, `claude-*`), and any AI-assistant self-attribution **must never** appear in branch names, commit messages or trailers (no `Co-Authored-By: Claude`, no `Claude-Session:`), PR/issue titles, bodies or comments, code comments, docs, or any other repo content. Name branches after the work (`expanded-name-corpus`, not `claude/...`). Write as the author, not as a tool advertising itself. If a default or harness setting would insert such text automatically, disable it (`includeCoAuthoredBy: false`); if it can't be disabled, say so rather than letting it through. The only exceptions are functional paths a tool requires to work — this file's name, `.claude/`, and spec-kit's own config keys. Never add new ones.
+
 ## Stack & hosting
 
 - Vite + React + TypeScript, styled entirely with inline `style={}` objects (no CSS framework in practice, despite Tailwind being wired up).
