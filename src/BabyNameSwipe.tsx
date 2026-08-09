@@ -323,7 +323,7 @@ function useStore() {
 
 /* ---------------- card ---------------- */
 
-function Badge({ item, dx, fly, depth, lastName, genderFilter }) {
+function Badge({ item, dx, fly, depth, lastName, genderFilter, dragging }) {
   const nameSize = item.n.length > 9 ? 62 : item.n.length > 6 ? 74 : 86;
   const rot = depth === 0 ? dx * 0.05 : 0;
   const bandColor = genderFilter === "both" ? C.neutralBand : item.g === "boy" ? C.boyBand : C.girlBand;
@@ -338,7 +338,7 @@ function Badge({ item, dx, fly, depth, lastName, genderFilter }) {
 
   return (
     <div
-      className="swipe-card"
+      className={depth === 0 && dragging ? "swipe-card dragging" : "swipe-card"}
       style={{
         position: "absolute",
         inset: 0,
@@ -490,6 +490,7 @@ export default function BabyNameSwipe() {
   const [i, setI] = useState(0);
   const [dx, setDx] = useState(0);
   const [fly, setFly] = useState(null);
+  const [dragging, setDragging] = useState(false);
   const [history, setHistory] = useState([]);
   const [toast, setToast] = useState(null);
 
@@ -582,6 +583,7 @@ export default function BabyNameSwipe() {
   const onDown = (e) => {
     if (fly) return;
     dragRef.current = { active: true, startX: e.clientX, id: e.pointerId };
+    setDragging(true);
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onMove = (e) => {
@@ -591,6 +593,7 @@ export default function BabyNameSwipe() {
   const onUp = () => {
     if (!dragRef.current.active) return;
     dragRef.current.active = false;
+    setDragging(false);
     if (dx > 90) decide("like");
     else if (dx < -90) decide("pass");
     else setDx(0);
@@ -792,16 +795,16 @@ export default function BabyNameSwipe() {
                   ) : (
                     visible
                       .map((item, d) => (
-                        <div key={item.n} className={d === 0 && dragRef.current.active ? "" : ""}>
-                          <Badge
-                            item={item}
-                            dx={d === 0 ? dx : 0}
-                            fly={d === 0 ? fly : null}
-                            depth={d}
-                            lastName={state.lastName}
-                            genderFilter={state.genderFilter}
-                          />
-                        </div>
+                        <Badge
+                          key={item.n}
+                          item={item}
+                          dx={d === 0 ? dx : 0}
+                          fly={d === 0 ? fly : null}
+                          depth={d}
+                          lastName={state.lastName}
+                          genderFilter={state.genderFilter}
+                          dragging={d === 0 ? dragging : false}
+                        />
                       ))
                       .reverse()
                   )}
