@@ -618,6 +618,7 @@ export default function BabyNameSwipe() {
                 genderFilter: "girl",
                 onboarded: false,
               });
+              setView("swipe");
             }}
           />
         ) : (
