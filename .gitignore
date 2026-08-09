@@ -16,11 +16,17 @@ dist-ssr
 # generated src/lib/nameCorpus.ts is committed.
 .corpus-cache/
 
+# Spec Kit generates its slash commands as agent skills here. They're committed
+# so a fresh clone (CI, a cloud session) has them without reinstalling the CLI —
+# `.specify/integrations/*.manifest.json` already tracks their checksums.
+# Everything else in this directory is machine-local.
+.claude/*
+!.claude/skills/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.claude/
 .DS_Store
 *.suo
 *.ntvs*
