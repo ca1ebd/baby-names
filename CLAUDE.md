@@ -2,6 +2,10 @@
 
 A two-person baby-naming app: each parent swipes through a shared name deck independently, and a "match" happens when both keep the same name. Single-page, mobile-first, no backend — everything lives in one device's browser storage.
 
+## No AI vendor attribution (non-negotiable)
+
+The words "Anthropic" and "Claude", any model name (Opus, Sonnet, Haiku, Fable, `claude-*`), and any AI-assistant self-attribution **must never** appear in branch names, commit messages or trailers (no `Co-Authored-By: Claude`, no `Claude-Session:`), PR/issue titles, bodies or comments, code comments, docs, or any other repo content. Name branches after the work (`expanded-name-corpus`, not `claude/...`). Write as the author, not as a tool advertising itself. If a default or harness setting would insert such text automatically, disable it (`includeCoAuthoredBy: false`); if it can't be disabled, say so rather than letting it through. The only exceptions are functional paths a tool requires to work — this file's name, `.claude/`, and spec-kit's own config keys. Never add new ones.
+
 ## Stack & hosting
 
 - Vite + React + TypeScript, styled entirely with inline `style={}` objects (no CSS framework in practice, despite Tailwind being wired up).
@@ -9,7 +13,7 @@ A two-person baby-naming app: each parent swipes through a shared name deck inde
 - `src/App.tsx` is a one-line wrapper; `src/lib/` holds small standalone pieces: `storage.ts` (localStorage shim), `useUpdateCheck.ts` (update-banner polling hook), `global.d.ts` / `vite-env.d.ts` (ambient types).
 - Hosted on Azure Static Web Apps (Free tier), resource group `baby-names-rg`, East US 2, on two separate SWA resources: `baby-names` (prod) and `baby-names-test` (staging). Prod is `https://baby-names.calebdudley.dev`, staging is `https://baby-names.test.calebdudley.dev`. Custom-domain DNS/TLS for both is managed centrally in the sibling `caleb-dudley-dev` repo via Terraform — see that repo's `docs/baby-names-domain-handoff.md` for the (fairly involved) history if either domain ever needs touching again.
 - Deploys via `.github/workflows/azure-static-web-apps.yml` (prod, pushes to `main`) and `azure-static-web-apps-staging.yml` (staging, pushes to any other branch) — both **hand-written** (checkout → npm ci → write `public/version.json` with `github.sha` → `npm run build` with `VITE_COMMIT_SHA` env → deploy with `skip_app_build: true`), not Azure's auto-generated ones. That's intentional: it's what lets us bake the commit SHA into the bundle for the update-check feature and the About screen's build stamp.
-- Every push to `main` auto-deploys to prod; every push to any other branch auto-deploys to staging. **Whenever a branch is pushed for the user's review, start a background task (Monitor/gh run watch) to watch the triggered staging Actions run, and report back the staging URL (`https://baby-names.test.calebdudley.dev`) once it's live** — don't make the user ask.
+- Every push to `main` auto-deploys to prod; every push to any other branch auto-deploys to staging (`https://baby-names.test.calebdudley.dev`). Docs-only changes (`**.md`, `.specify/`, `specs/`, `docs/`) don't trigger deploys. Don't proactively monitor deploy runs — only investigate if a deploy is suspected to have failed or the user asks.
 
 ## Data model & storage
 
