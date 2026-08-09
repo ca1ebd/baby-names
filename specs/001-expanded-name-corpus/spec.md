@@ -99,11 +99,10 @@ Matches screen and each swiper's keeps are unchanged.
   rules were build-time properties of the hand-built pool and are deliberately
   dropped — the app is generic now. Users who want such rules get them at
   runtime when 002 ships.
-- **Obscure names in the unfiltered deck**: because the deck is shuffled and
-  the corpus is complete, a rare spelling is dealt as readily as a common one.
-  This friction is **accepted for this release** — narrowing the deck is the
-  job of the criteria feature (002), not of a curated corpus. No quality cut
-  is applied.
+- **Obscure names deeper in the deck**: the corpus keeps its long tail, so
+  genuinely rare spellings are still in play — they are simply dealt later,
+  after the core. The deck is never narrowed by removing them; narrowing to a
+  user's taste remains the job of the criteria feature (002).
 - **Corpus exhausted**: unreachable in practice at this corpus size, but the
   existing end-of-deck message stays as-is.
 - **Storage growth**: the corpus ships with the app, not in the save; device
@@ -116,9 +115,15 @@ Matches screen and each swiper's keeps are unchanged.
 ### Functional Requirements
 
 - **FR-001**: The app MUST ship with a large built-in list of real names
-  (thousands per gender, derived from published real-world naming data), each
-  tagged girl or boy with no spelling in both pools, with popularity
-  information retained for use by later features.
+  (tens of thousands per gender, derived from published real-world naming
+  data), each tagged girl or boy with no spelling in both pools, with
+  popularity information retained for use by later features. Names below a
+  minimal usage floor (fewer than 25 recorded births) are excluded as source
+  noise.
+- **FR-001b**: The list MUST identify a **core** of the most currently-used
+  names (several thousand per gender), and the deck MUST deal that core before
+  the remainder, in a popularity-weighted random order — not strict rank order,
+  and not a flat shuffle. Every name outside the core MUST remain reachable.
 - **FR-002**: The corpus MUST be generic — it carries no stylistic
   restrictions of its own (the former no-D-starts / no-"ey"-endings rules are
   retired).
@@ -151,10 +156,12 @@ Matches screen and each swiper's keeps are unchanged.
 
 ### Measurable Outcomes
 
-- **SC-001**: The default deck offers the complete published corpus — every
-  qualifying real name from the source data (~106,000, roughly 130x the
-  previous hand-built pool) — and 100% of served names are real names from
-  that list.
+- **SC-001**: The default deck offers ~64,000 real names (roughly 80x the
+  previous hand-built pool) — every name in the source data with at least 25
+  recorded births — and 100% of served names are real names from that list.
+- **SC-001b**: The deck is front-loaded: of the first 20 cards, the median sits
+  within the top ~200 names by recent popularity, while roughly one card in six
+  comes from deeper in the list. No name is unreachable.
 - **SC-002**: 100% of existing users' picks, matches, and profile fields
   survive the upgrade, including keeps and matches for names absent from the
   new corpus — verified by upgrading a save seeded with such a name.
@@ -172,9 +179,11 @@ Matches screen and each swiper's keeps are unchanged.
 - **Corpus sourcing**: derived from published, public real-world naming data
   (see [research.md](research.md)); each spelling assigned to exactly one
   gender pool by predominant usage, preserving the no-overlap invariant.
-- **No popularity cut**: every valid spelling in the source is included. Deck
-  quality is deliberately traded for completeness, on the expectation that
-  criteria filtering (002) is where users narrow the field.
+- **Floor, not curation**: every spelling with at least 25 recorded births is
+  included; only the source's one-off spellings are dropped. Deck *feel* is
+  handled by ordering rather than by removing names, so the tail stays
+  reachable and criteria filtering (002) still has the full field to work
+  with.
 - **Corpus curation happens at build time** (a static artifact shipped with
   the app); no network access is needed for any behavior in this feature.
 - **Deck ordering stays deterministic and shared**, as today — this is what

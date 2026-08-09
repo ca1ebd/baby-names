@@ -11,7 +11,13 @@ const MODULE_PATH = path.join(ROOT, "src/lib/nameCorpus.ts");
 
 // Expected magnitudes from the full SSA corpus; a large swing means a source
 // or parsing regression rather than a legitimate data refresh.
-const EXPECTED = { girl: 66188, boy: 39778, tolerance: 0.1 };
+const EXPECTED = {
+  girl: 39749,
+  boy: 24131,
+  girlCore: 7457,
+  boyCore: 5707,
+  tolerance: 0.1,
+};
 const VALID_NAME = /^[A-Z][A-Za-z'-]{1,14}$/;
 
 const problems = [];
@@ -48,7 +54,21 @@ async function loadCorpus() {
     return JSON.parse(match[1]).split(",");
   };
 
-  return { girl: extract("GIRL_CORPUS"), boy: extract("BOY_CORPUS") };
+  const size = (name) => {
+    const m = source.match(new RegExp(`export const ${name} = (\\d+);`));
+    if (!m) {
+      console.error(`\n  verify-name-corpus: missing ${name} in the generated module.\n`);
+      process.exit(1);
+    }
+    return Number(m[1]);
+  };
+
+  return {
+    girl: extract("GIRL_CORPUS"),
+    boy: extract("BOY_CORPUS"),
+    girlCore: size("GIRL_CORE_SIZE"),
+    boyCore: size("BOY_CORE_SIZE"),
+  };
 }
 
 function checkList(list, label) {
@@ -88,7 +108,7 @@ function checkMagnitude(actual, expected, label) {
   }
 }
 
-const { girl, boy } = await loadCorpus();
+const { girl, boy, girlCore, boyCore } = await loadCorpus();
 
 const girlSet = checkList(girl, "girl");
 const boySet = checkList(boy, "boy");
@@ -103,6 +123,16 @@ if (overlap.length) {
 
 checkMagnitude(girl.length, EXPECTED.girl, "girl");
 checkMagnitude(boy.length, EXPECTED.boy, "boy");
+checkMagnitude(girlCore, EXPECTED.girlCore, "girl core");
+checkMagnitude(boyCore, EXPECTED.boyCore, "boy core");
+
+// The core must be a real prefix of each list, or the deck's core-first
+// ordering would silently deal tail names early.
+for (const [size, list, label] of [[girlCore, girl, "girl"], [boyCore, boy, "boy"]]) {
+  if (!(size > 0 && size < list.length)) {
+    note(`${label}: core size ${size} is not inside the list (${list.length})`);
+  }
+}
 
 if (problems.length) {
   console.error(`\n  verify-name-corpus: FAILED\n\n    - ${problems.join("\n    - ")}\n`);
@@ -112,8 +142,8 @@ if (problems.length) {
 console.log(`
   verify-name-corpus: PASS
 
-  girl:    ${girl.length.toLocaleString()}
-  boy:     ${boy.length.toLocaleString()}
+  girl:    ${girl.length.toLocaleString()} (${girlCore.toLocaleString()} core)
+  boy:     ${boy.length.toLocaleString()} (${boyCore.toLocaleString()} core)
   total:   ${(girl.length + boy.length).toLocaleString()}
   overlap: none
   format:  all entries match ${VALID_NAME}

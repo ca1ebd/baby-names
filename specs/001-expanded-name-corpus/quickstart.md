@@ -23,27 +23,28 @@ node scripts/validate-corpus-ui.mjs        # 13 checks
 The manual steps below remain the source of truth for what is being verified,
 and §7 (real iOS device) can only be done by hand.
 
-Corpus generation needs network access to the chosen source. `ssa.gov` is
-blocked by this environment's network policy today; the `mirror` source
-(raw.githubusercontent.com) is reachable. See research Decision 1.
+Corpus generation needs network access to `ssa.gov`, which is reachable — but
+only with the browser header set the build script sends (see research
+Decision 1). `--source mirror` is the offline fallback.
 
 ## 1. Generate and verify the corpus
 
 ```bash
-node scripts/build-name-corpus.mjs          # defaults: --source ssa --since 1995, no cut
+node scripts/build-name-corpus.mjs   # defaults: --min-uses 25 --core-min 300 --core-since 2005
 node scripts/verify-name-corpus.mjs
 ```
 
 **Expected**: the build downloads the 7.5 MB SSA archive (146 yearly files,
-1880–2025), prints per-gender counts of **66,188 girl / 39,778 boy (105,966
-total)**, and writes `src/lib/nameCorpus.ts`. The verifier exits 0 with all
-invariants passing: format, no commas in entries, no duplicates, no girl/boy
-overlap, counts within 10% of expected.
+1880–2025) and prints **39,749 girl (7,457 core) / 24,131 boy (5,707 core),
+63,880 total**, dropping ~42,000 spellings under the 25-use floor. The verifier
+exits 0 with all invariants passing: format, no commas in entries, no
+duplicates, no girl/boy overlap, core sizes inside their lists, counts within
+10% of expected.
 
 Sanity-check the head of each list — it should read contemporary
-(*Emily, Emma, Olivia, Isabella…* / *Jacob, Michael, Noah, Ethan…*), not
+(*Emma, Olivia, Sophia, Isabella…* / *Noah, Jacob, Liam, William…*), not
 mid-century (*Mary, Patricia, Linda…*). Mid-century names at the top mean the
-ranking fell back to all-time counts instead of `--since`.
+core ranking fell back to all-time counts.
 
 A 403 from ssa.gov means the browser header set is missing or incomplete (see
 [contracts/name-corpus.md](contracts/name-corpus.md)), not that the network is
@@ -59,16 +60,15 @@ npm run lint
 npm run build
 ```
 
-**Expected**: both pass. Record the corpus chunk's gzip size from Vite's build
-output — the unoptimized baseline is 383 KB, and the packed-string form should
-come in meaningfully under it. Azure Static Web Apps serves Brotli, so the
-over-the-wire figure is lower again (~280 KB at the baseline).
+**Expected**: both pass, and the bundle lands near **292 KB gzip** (baseline
+before this feature: 70 KB; corpus module ≈217 KB of the total). Azure Static
+Web Apps serves Brotli, so the over-the-wire figure is lower again.
 
 ## 2b. Performance budget (spec SC-004)
 
-At 105,966 names the load path is the risk, not the swipe path. Measured
-baselines on desktop Node with a naive object-array implementation: 118 ms
-module-load build+shuffle, 26 ms per deck rebuild, 26 MB heap.
+At this corpus size the load path is the risk, not the swipe path. Measured on
+the shipped build: **368 ms** to first card at 4× CPU throttle versus **242 ms**
+for the pre-change build — **+126 ms**, inside the 200 ms budget.
 
 Check in the browser with devtools CPU throttling at 4x:
 
@@ -79,9 +79,9 @@ Check in the browser with devtools CPU throttling at 4x:
 3. Swipe 20 cards rapidly. **Expected**: identical feel to today — the swipe
    path touches only the visible cards and must not regress.
 
-If any budget is missed, the mitigations in research Decision 2b (packed
-strings, string-not-object pools, lazy per-filter pools) are the levers;
-trimming the corpus is not, by owner decision.
+If any budget is missed, the levers are the mitigations in research Decision 2b
+(packed strings, string-not-object pools, lazy per-filter pools) and the
+`--min-uses` floor — not removing the long tail, which must stay reachable.
 
 ## 3. Fresh-install scenario (spec User Story 1)
 
@@ -92,7 +92,11 @@ npm run dev
 In a browser with empty storage:
 
 1. Complete onboarding, choose **girl**, swipe ~20 cards.
-   **Expected**: real names, correct pink band, no repeats.
+   **Expected**: real names, correct pink band, no repeats. The run should read
+   mostly familiar with a few unusual picks mixed in — e.g. *Alannah,
+   Josephine, Olivia, Kylie, Sloane, Josephina, Favour, Sloan, Emma, Makena*.
+   All-familiar means the weighting is too strong; mostly-unrecognizable means
+   the core-first deal is not being applied.
 2. Switch the filter to **boy**, then **both**.
    **Expected**: appropriate names per mode; neutral slate band in "both" mode.
 3. Swipe past 800 cumulative names (or inspect the pool length in devtools).

@@ -47,9 +47,9 @@ Single project at repository root: app code in `src/`, new build tooling in
 **⚠️ CRITICAL**: No user story work can begin until `src/lib/nameCorpus.ts` exists and verifies clean
 
 - [X] T003 Implement `scripts/build-name-corpus.mjs` per [contracts/name-corpus.md](contracts/name-corpus.md) §2: flags `--source ssa|mirror`, `--input`, `--limit`, `--since` (default 1995), `--out`; download SSA `names.zip` **with the full browser header set** (`User-Agent`, `Accept`, `Accept-Language`, `Sec-Fetch-*`, `Upgrade-Insecure-Requests`, `sec-ch-ua*`, `Referer`) or Akamai returns 403; on 403 emit an error saying it is edge filtering, not a network-policy denial
-- [X] T004 In `scripts/build-name-corpus.mjs`, implement parsing and curation per [research.md](research.md) Decision 2: keep spellings matching `/^[A-Z][A-Za-z'-]{1,14}$/`, assign each to the single gender with the higher **all-time** count, order each list by **births since `--since`**, apply no cut by default
-- [X] T005 In `scripts/build-name-corpus.mjs`, emit `src/lib/nameCorpus.ts` in the packed form from [data-model.md](data-model.md) — two comma-delimited string literals `.split(",")` into `GIRL_CORPUS` / `BOY_CORPUS`, with a header comment recording source, generation date, and counts; exit non-zero on any invariant violation so a bad corpus is never written
-- [X] T006 [P] Implement `scripts/verify-name-corpus.mjs` asserting every guarantee in [contracts/name-corpus.md](contracts/name-corpus.md) §1: entry format, no commas in entries, no duplicates within a list, empty girl/boy intersection, counts within 10% of ≈66,188 girl / ≈39,778 boy; exit non-zero on failure
+- [X] T004 In `scripts/build-name-corpus.mjs`, implement parsing and curation per [research.md](research.md) Decision 2: keep spellings matching `/^[A-Z][A-Za-z'-]{1,14}$/`, assign each to the single gender with the higher **all-time** count, apply the `--min-uses` floor, split out the core by `--core-min` births since `--core-since`, and order core-first
+- [X] T005 In `scripts/build-name-corpus.mjs`, emit `src/lib/nameCorpus.ts` in the packed form from [data-model.md](data-model.md) — two comma-delimited string literals `.split(",")` into `GIRL_CORPUS` / `BOY_CORPUS`, plus `GIRL_CORE_SIZE` / `BOY_CORE_SIZE`, with a header comment recording source, generation date, and counts; exit non-zero on any invariant violation so a bad corpus is never written
+- [X] T006 [P] Implement `scripts/verify-name-corpus.mjs` asserting every guarantee in [contracts/name-corpus.md](contracts/name-corpus.md) §1: entry format, no commas in entries, no duplicates within a list, empty girl/boy intersection, counts within 10% of ≈39,749 girl / ≈24,131 boy and cores ≈7,457 / ≈5,707, core sizes inside their lists; exit non-zero on failure
 - [X] T007 Run `node scripts/build-name-corpus.mjs` to generate `src/lib/nameCorpus.ts` and commit the generated module (depends on T003–T005)
 - [X] T008 Run `node scripts/verify-name-corpus.mjs` and confirm it exits 0; spot-check that each list's head reads contemporary (*Emily, Emma, Olivia…* / *Jacob, Michael, Noah…*), not mid-century (*Mary, Patricia, Linda…*), which would mean ranking fell back to all-time counts (depends on T006, T007)
 
@@ -59,7 +59,7 @@ Single project at repository root: app code in `src/`, new build tooling in
 
 ## Phase 3: User Story 1 - A much bigger, generic default deck (Priority: P1) 🎯 MVP
 
-**Goal**: The deck deals from all 105,966 corpus names instead of the 800-name hand-built pool, with no visual or interaction change and no startup regression.
+**Goal**: The deck deals from the 63,880-name corpus instead of the 800-name hand-built pool, core names first, with no visual or interaction change and no startup regression.
 
 **Independent Test**: On a fresh install, swipe past 800 cumulative names and confirm real, correctly gender-tagged names keep coming with no repeats; both swipers encounter the same order.
 
@@ -89,6 +89,8 @@ Single project at repository root: app code in `src/`, new build tooling in
 - [X] T017 [US2] Apply the scoping rule from [data-model.md](data-model.md) to both lists: a name found in the corpus shows only when its gender matches the active girl/boy/both view; a name **not** in the corpus shows in every view
 - [X] T018 [US2] Execute [quickstart.md](quickstart.md) §5 (upgrade scenario) with a seeded absent name and confirm every prior match and keep survives, profile fields are unchanged, and no re-onboarding is triggered
 - [X] T019 [US2] Execute [quickstart.md](quickstart.md) §6: confirm the save is still under `babyname-swipe-v3` with an unchanged shape and no new top-level keys (Constitution IV)
+
+- [X] T019b [US1] Tune the deck shape against the real corpus: apply the `--min-uses` floor, deal the core before the tail, and set the core weighting so the first 20 cards read mostly familiar with occasional deeper picks (research Decision 2)
 
 **Checkpoint**: Both user stories complete; the feature is functionally done
 

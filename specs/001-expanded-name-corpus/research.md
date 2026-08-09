@@ -42,84 +42,95 @@ is not.
 names, and generation cost recurs — Constitution II); Kaggle mirrors (require
 authentication); `names-dataset` (provenance unsuitable for a baby-name app).
 
-## Decision 2 — Curation rules
+## Decision 2 — Curation rules and deck shaping
 
-**Decision**: Keep every spelling matching `/^[A-Z][A-Za-z'-]{1,14}$/` — **no
-popularity cut**. Assign each spelling to the single gender with the higher
-**all-time** occurrence count (the losing gender drops it entirely). Order each
-list by **births since 1995**, so array index is a recency-weighted popularity
-rank. Result: **105,966 names (66,188 girl / 39,778 boy)**, ~132x today's 800.
+**Decision**: Three settings, tuned against the real archive:
 
-**Rationale**: Narrowing the field is the job of the criteria feature (002),
-which is expected to become a paid tier — so the corpus should be the complete
-universe that filtering searches, not a pre-curated subset. Owner decision
-(2026-08-08) explicitly accepts unfiltered-deck friction in the interim.
+| Setting | Value | Effect |
+|---|---|---|
+| Full-list floor | ≥ 25 all-time births | 105,966 → **63,880** (39,749 girl / 24,131 boy) |
+| Core membership | ≥ 300 births since 2005 | **7,457 girl / 5,707 boy** |
+| Core ordering | births since 2005, descending | index = "familiar today" rank |
 
-Gender assignment on all-time counts is stable and deterministic. Ranking on
-recent births is what would make a *curated* deck feel contemporary, and it
-still matters here because index-as-rank is the popularity signal 002 consumes.
-Measured difference, same archive:
+Gender assignment still uses all-time counts (stable, deterministic). The deck
+deals the **core first, in a popularity-weighted random order**, then the long
+tail shuffled flat.
 
-- All-time ranking puts *Mary, Patricia, Linda, Barbara, Dorothy* at the top.
-- Since-1995 ranking puts *Emily, Emma, Olivia, Isabella* and *Jacob, Michael,
-  Noah, Ethan* at the top.
+**Rationale**: the first cut shipped every spelling SSA publishes, and in use
+that read as noise — a random hand was *Denekia, Frontis, Dameisha, Robbye*.
+Two separate problems hid in that, and they need separate fixes:
 
-**Measured alternatives** (retained for when 002 needs a "common names" tier):
+1. **The floor was too low.** SSA's own cutoff is 5 occurrences in a single
+   year, which admits ~42,000 spellings used once nationally. A 25-use
+   all-time floor removes that noise without curating toward "good" names.
+2. **A flat shuffle buries the familiar names.** Even with a decent corpus, a
+   uniform draw from 7,457 core names has median rank ~3,700 — so *Emma* is as
+   rare as *Zalayah*. Corpus size and deck feel are independent knobs, and
+   only the second one controls what the first twenty cards look like.
 
-| Floor (births since 1995) | Corpus | vs. today | Raw KB | Sample of a random hand |
-|---|---|---|---|---|
-| **none (chosen)** | **105,966** | **132x** | **985** | Denekia, Frontis, Dameisha, Abdulmajid, Robbye |
-| ≥25 | 48,346 | 60x | 439 | Rommel, Yaindhi, Nello, Harmonii, Jeshua |
-| ≥100 | 29,451 | 37x | 264 | Aaminah, Mayukha, Aakash, Cadee, Cristyn |
-| ≥1,000 | 7,242 | 9x | 64 | Colby, Gabriel, Colten, Joann, Divya, Ruthie |
+**Deck-shaping options measured** (median popularity rank of the first 20
+cards, girl core):
 
-**Accepted consequence**: the deck is uniformly shuffled, so a one-off spelling
-is dealt as readily as *Emma*; roughly 25,000 entries appear only once
-nationally since 1995. The owner accepts this friction for this release.
+| Ordering | Median rank | Reads as |
+|---|---|---|
+| Strict popularity | ~10 | a top-100 list; no discovery |
+| Flat shuffle | 2,756 | mostly unrecognizable |
+| Weighted, `u^((rank+1)^0.7)` | 860 | still ~9 of 24 from beyond rank 2,000 |
+| **Weighted, `u^(rank+1)`** | **182** | **familiar, ~1 card in 6 from deeper** |
 
-**Alternatives rejected**: keeping a name in both gender pools (violates the
-no-overlap invariant that makes name-keyed picks safe); a curated top-N cut
-(rejected by the owner — filtering belongs in 002); popularity-weighted deck
-ordering instead of uniform shuffle (a deck-behavior change, out of scope for
-this feature).
+The chosen scheme is weighted sampling without replacement (Efraimidis–Spirakis):
+each name draws `key = u^(rank+1)`, highest keys deal first. Nothing is
+excluded — a rank-7,000 name can still surface early, just rarely. Because the
+weight comes from array position and the lists are already rank-ordered, this
+costs **zero extra bytes**; storing per-name weights was considered and
+rejected for that reason.
 
-## Decision 2b — Load-path cost of the full corpus
+Observed first cards after tuning: *Alannah, Josephine, Olivia, Kylie, Sloane,
+Josephina, Favour, Sloan, Emma, Makena* (girl) and *Antonio, Jacob, Elias,
+Donovan, Kashmir, Flynn, Noah, Fox, Brennan, Max* (boy).
+
+**Retained for spec 002**: the core/tail boundary is exactly the "common names"
+tier a criteria filter wants for "common but not top-10" style requests.
+
+**Alternatives rejected**: keeping a name in both gender pools (breaks the
+no-overlap invariant that makes name-keyed picks safe); curating the corpus
+down to a hand-picked list (the owner's decision stands — narrowing is 002's
+job, and the tail stays reachable); ranking the core by all-time or since-1995
+counts (surfaces *Mary, Patricia, Linda* and other names no longer in use).
+
+## Decision 2b — Load-path cost
 
 **Decision**: Ship the corpus as **packed delimited strings split at module
 load**, keep pools as plain string arrays, and **build only the pool for the
 active gender filter** rather than all three eagerly.
 
-**Rationale**: measured on the real 105,966-name corpus:
-
-| Metric | Naive (array literal of objects, all 3 pools eager) |
-|---|---|
-| Module raw / gzip | 985 KB / **383 KB** |
-| Module-load build + shuffle (Node, desktop) | 118 ms → est. 300–500 ms mid-range phone |
-| Deck rebuild (`pool.filter`) | 26 ms → est. ~75–100 ms on phone |
-| Heap | 26 MB |
-
-Unoptimized, that is a tripled bundle plus a visible startup stall — a
-regression against spec SC-004 even though no user-visible feature changed.
-The three mitigations are cheap and well-understood:
+**Rationale**: a naive implementation of the first (105,966-name) cut measured
+985 KB raw / 383 KB gzip, 118 ms of module-load work on desktop Node
+(est. 300–500 ms on a mid-range phone), 26 ms per deck rebuild and 26 MB heap —
+a tripled bundle and a visible startup stall, a regression against SC-004 with
+no user-visible feature to justify it. The three mitigations:
 
 1. **Packed strings** (`"Emma,Olivia,…".split(",")`) parse far faster than a
-   106k-element array literal and drop the per-name quote bytes (~985 KB →
-   ~775 KB raw).
+   tens-of-thousands-element array literal and drop the per-name quote bytes.
 2. **String arrays, not object arrays** — `{ n, g }` is materialized only for
-   the handful of visible cards; gender comes from which pool the name is in.
-   This removes ~106k object allocations from startup and most of the heap.
-3. **Lazy per-filter pools** — today all three (`GIRL`, `BOY`, `BOTH`) are
-   built at module load; building only the active one cuts roughly two-thirds
-   of that work, memoized per filter thereafter.
+   the handful of visible cards; gender comes from a membership set built on
+   first use, so a fresh swiper never pays for it.
+3. **Lazy per-filter pools** — only the active filter's pool is ever built,
+   memoized thereafter.
 
-Transfer cost is further reduced in production by Azure Static Web Apps'
-Brotli encoding (est. ~280 KB vs. 383 KB gzip). Verification of the resulting
-numbers is part of the quickstart, not an assumption.
+**Measured, final** (63,880-name corpus, all mitigations in place):
+
+| Metric | Baseline (800-name pool) | Shipped |
+|---|---|---|
+| Bundle, gzip | 70 KB | 292 KB (corpus module 217 KB of it) |
+| Cold load → first card, 4× CPU throttle | 242 ms | **368 ms (+126 ms)** |
+| Budget (spec SC-004) | — | ≤ 200 ms added ✅ |
+
+Azure Static Web Apps serves Brotli, so the over-the-wire figure is lower again.
 
 **Alternatives rejected**: code-splitting the corpus into a lazily-loaded chunk
-(worthwhile if startup budget is missed, but it delays the first card — the
-one thing the app must do instantly); trimming the corpus (the owner's
-decision above rules it out).
+(worthwhile if the budget is ever missed, but it delays the first card — the
+one thing the app must do instantly).
 
 ## Decision 3 — Artifact format and delivery
 

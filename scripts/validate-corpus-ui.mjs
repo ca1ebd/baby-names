@@ -79,7 +79,7 @@ const browser = await chromium.launch(existsSync(executablePath) ? { executableP
     )
   );
   const bothFirstCard = await page.evaluate(() => Math.round(performance.now()));
-  check("\u00a72b both-mode (106k pool) \u2192 first card (4x CPU throttle)", bothFirstCard < 3000,
+  check("\u00a72b both-mode (full combined pool) \u2192 first card (4x CPU throttle)", bothFirstCard < 3000,
     `${bothFirstCard} ms in-page (${Date.now() - t} ms wall incl. navigation)`);
 
   await ctx.close();

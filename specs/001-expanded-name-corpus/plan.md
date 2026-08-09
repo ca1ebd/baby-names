@@ -7,9 +7,12 @@
 ## Summary
 
 Replace the 800-name hand-built `RAW` literal in `src/BabyNameSwipe.tsx` with a
-generated, generic corpus of **105,966 real names** (66,188 girl / 39,778 boy)
-— the complete qualifying set from the SSA's public baby-name archive, no
-popularity cut — built at development time and committed as a source module. Everything else about
+generated, generic corpus of **63,880 real names** (39,749 girl / 24,131 boy)
+from the SSA's public baby-name archive — every spelling with at least 25
+recorded births — built at development time and committed as a source module.
+Within it, a **core** of the most currently-used names (7,457 girl / 5,707 boy)
+is dealt first in popularity-weighted random order, so early cards are familiar
+while the long tail stays reachable. Everything else about
 swiping stays as-is: the same fixed-seed shuffle keeps both swipers on the same
 path, and picks stay keyed by name so no storage migration is needed.
 
@@ -45,13 +48,12 @@ mid-range phone; swiper/filter switch stays under ~150 ms (spec SC-004). At
 this corpus size these are the binding constraints, and they require the
 load-path work in research Decision 2b — not free by default
 
-**Constraints**: corpus adds ~383 KB gzip (~280 KB Brotli as served)
-unoptimized, targeted well below that via packed strings; zero runtime network
-calls; zero recurring cost; no visual or interaction changes
+**Constraints**: corpus adds ~217 KB gzip (bundle 70 KB → 292 KB); zero runtime
+network calls; zero recurring cost; no visual or interaction changes
 
-**Scale/Scope**: 105,966 names (66,188 girl / 39,778 boy), verified against the
-live SSA archive, vs. 800 today; two touched source files plus two new
-build/verify scripts and one generated module
+**Scale/Scope**: 63,880 names (39,749 girl / 24,131 boy; core 7,457 / 5,707),
+verified against the live SSA archive, vs. 800 today; two touched source files
+plus build/verify/validate scripts and one generated module
 
 ## Constitution Check
 
@@ -126,14 +128,18 @@ runs at development time, never in the app or the deploy pipeline.
    002 can use it directly for "common but not top-10" criteria — which at this
    corpus size is the main lever for taming deck quality.
 
-2b. **No popularity cut, and the load path pays for it.** Shipping all 105,966
-   names is an explicit owner decision (research Decision 2): narrowing belongs
-   to 002, expected to become a paid tier. The cost lands entirely on startup
-   and bundle size, so three mitigations are part of this feature, not
-   follow-ups — pack the corpus as delimited strings rather than array
-   literals, keep pools as plain string arrays (materialize `{ n, g }` only for
-   visible cards), and build only the active gender filter's pool instead of
-   all three eagerly. See research Decision 2b for the measured baseline.
+2b. **Corpus size and deck feel are separate knobs.** A 25-birth floor removes
+   the source's one-off spellings (105,966 → 63,880) without curating toward
+   "good" names, and a core-first, popularity-weighted deal decides what the
+   first cards look like. Shipping everything with a flat shuffle was tried and
+   rejected in use — see research Decision 2.
+
+2c. **The load path is paid for deliberately.** Three mitigations are part of
+   this feature, not follow-ups — pack the corpus as delimited strings rather
+   than array literals, keep pools as plain string arrays (materialize
+   `{ n, g }` only for visible cards), and build only the active gender
+   filter's pool instead of all three eagerly. Measured result: +126 ms to
+   first card at 4× CPU throttle, inside the 200 ms budget.
 
 3. **The `s` (style) tag is dropped.** It is referenced nowhere in the codebase
    and cannot be derived for a generic corpus. `g` (girl/boy) stays — it drives

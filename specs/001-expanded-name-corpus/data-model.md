@@ -9,11 +9,18 @@ The bundled list of real names, emitted by `scripts/build-name-corpus.mjs` into
 
 | Field | Type | Notes |
 |---|---|---|
-| `GIRL_CORPUS` | `string[]` | 66,188 girl-assigned spellings, index = popularity rank (0 = most popular) |
-| `BOY_CORPUS` | `string[]` | 39,778 boy-assigned spellings, same ordering rule |
+| `GIRL_CORPUS` | `string[]` | 39,749 girl-assigned spellings, index = popularity rank (0 = most popular) |
+| `BOY_CORPUS` | `string[]` | 24,131 boy-assigned spellings, same ordering rule |
+| `GIRL_CORE_SIZE` | `number` | 7,457 — how many leading entries form the core |
+| `BOY_CORE_SIZE` | `number` | 5,707 — same, for boys |
+
+Each list is **core-first**: entries `[0, CORE_SIZE)` are the core, ranked by
+births since 2005; entries `[CORE_SIZE, end)` are the long tail, ranked by
+births since 1995. The core boundary is what lets the deck deal familiar names
+before rare ones without a second data structure.
 
 **Storage form**: each list is emitted as a single comma-delimited string literal
-and `.split(",")` at module load, not as a 100k-element array literal — this
+and `.split(",")` at module load, not as a tens-of-thousands-element array literal — this
 parses substantially faster and drops the per-name quote bytes (research
 Decision 2b). The exported type stays `string[]`, so consumers are unaffected.
 
@@ -24,17 +31,27 @@ Decision 2b). The exported type stays `string[]`, so consumers are unaffected.
 - No duplicates within either array.
 - `GIRL_CORPUS ∩ BOY_CORPUS = ∅` — the no-overlap invariant that makes
   name-keyed picks safe in "both" mode (spec FR-001).
-- Both arrays are non-empty and meet their expected magnitude (≈66k girl /
-  ≈40k boy; the verifier warns on a >10% swing, which signals a source or
-  parsing regression rather than a legitimate data update).
+- Both arrays are non-empty and meet their expected magnitude (≈40k girl /
+  ≈24k boy, core ≈7.5k / ≈5.7k; the verifier warns on a >10% swing, which
+  signals a source or parsing regression rather than a legitimate data update).
+- Each core size is strictly inside its list (`0 < size < length`), so the core
+  is a real prefix.
 - Arrays are ordered by descending source popularity (verified by the script
   emitting a rank-ordered file; not re-derivable at runtime).
 
 **Derived per active filter** (in `BabyNameSwipe.tsx`, replacing today's `RAW`):
 
-- `poolFor("girl")` → `shuffled(GIRL_CORPUS)` (strings)
-- `poolFor("boy")` → `shuffled(BOY_CORPUS)`
-- `poolFor("both")` → `shuffled([...GIRL_CORPUS, ...BOY_CORPUS])`
+Each pool is the **weighted-shuffled core followed by the flat-shuffled tail**:
+
+- `poolFor("girl")` → `weightedShuffle(core) ++ shuffled(tail)`
+- `poolFor("boy")` → same, from `BOY_CORPUS`
+- `poolFor("both")` → cores of both genders weighted together, then both tails
+
+`weightedShuffle` is sampling without replacement where each name draws
+`key = u^(rank+1)` and the highest keys deal first — familiar names surface
+early, rare ones occasionally, and nothing is excluded. `u` comes from the same
+seeded PRNG as `shuffled()`, so the whole order stays deterministic and
+identical for both swipers (spec FR-004).
 
 Two changes from today, both from research Decision 2b: pools hold **name
 strings**, not `{ n, g }` objects (gender is recovered from corpus membership,
@@ -42,8 +59,8 @@ and the object is built only for the few visible cards), and pools are built
 **lazily per filter and memoized** rather than all three eagerly at module
 load.
 
-The `shuffled()` helper and its fixed seed (`20260730`) are unchanged — this is
-what keeps both swipers on the same order with no bookkeeping (spec FR-004).
+The fixed seed (`20260730`) is unchanged — this is what keeps both swipers on
+the same order with no bookkeeping (spec FR-004).
 
 ## Entity: Name Card (modified)
 
@@ -94,8 +111,8 @@ user actually swiped (spec FR-006):
   corpus is shown in every view, because hiding it is exactly the data loss
   FR-006 exists to prevent.
 
-A corpus membership lookup (`name → "girl" | "boy" | undefined`) built once at
-module load supports the scoping test. `ListView`'s `Row` renders only the name
+A corpus membership lookup (`name → "girl" | "boy" | undefined`) built lazily
+on first use supports the scoping test — a fresh swiper never pays for it. `ListView`'s `Row` renders only the name
 string, so no gender data is needed for display.
 
 **Ordering note**: matches and keeps currently inherit the shuffled pool's
