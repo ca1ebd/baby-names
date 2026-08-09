@@ -1,6 +1,6 @@
 # Feature Specification: Expanded Name Corpus
 
-**Feature Branch**: `claude/ai-feature-spec-ok9p4r`
+**Feature Branch**: `expanded-name-corpus`
 
 **Created**: 2026-08-08
 

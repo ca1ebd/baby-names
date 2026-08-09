@@ -1,6 +1,6 @@
 # Implementation Plan: Expanded Name Corpus
 
-**Branch**: `claude/ai-feature-spec-ok9p4r` | **Date**: 2026-08-08 | **Spec**: [spec.md](spec.md)
+**Branch**: `expanded-name-corpus` | **Date**: 2026-08-08 | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `/specs/001-expanded-name-corpus/spec.md`
 
