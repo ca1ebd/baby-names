@@ -4,7 +4,8 @@
 
 **Created**: 2026-08-10
 
-**Status**: Draft — 2 open clarifications
+**Status**: Draft — 2 open clarifications (Q1 account requirement, Q2 cost
+ceiling). Pre-release confirmed and Principle III deviation granted 2026-08-10.
 
 **Depends on**: [001-expanded-name-corpus](../001-expanded-name-corpus/spec.md)
 — the name corpus this feature moves off-device and serves from the backend.
@@ -38,19 +39,27 @@ get everything working and we'll do CI/CD as the next spec"
 
 ## Scope statement
 
-This feature is a **migration, not a new user-facing capability**. Its success
-condition is that a couple using the app notices almost nothing except that
-they now sign in, and that their swipes survive losing their phone. Everything
-the app does today — the deck, the segmented swiper control, matches, settings,
-backup/restore, the update toast — must still work identically afterward.
+This feature is a **re-platforming, not a new user-facing capability**. Its
+success condition is that a couple using the app notices almost nothing except
+that they now sign in, and that their swipes survive losing their phone.
+Everything the app does today — the deck, the segmented swiper control,
+matches, settings, backup/restore, the update toast — must still work
+identically afterward.
 
-Three things are explicitly **out of scope** and belong to later specs:
+**The app is pre-release.** There is no production data and no installed base,
+so this spec carries no data-migration obligation — the riskiest part of a
+change like this simply does not apply. It also means the local-only mode goes
+away rather than being maintained alongside accounts.
+
+Four things are explicitly **out of scope** and belong elsewhere:
 
 - **Partner linking.** One account holds both swipers, exactly as one browser
   does today. Two people with two accounts sharing a deck is a later feature.
-- **CI/CD.** This release deploys by hand. Automating it is the next spec.
+- **CI/CD.** This release deploys by hand. Automating it is the next spec, and
+  deliberately so — see the accepted deviation below.
 - **Criteria filtering.** That is [003](../003-ai-name-filter/spec.md), which
   builds on the plumbing this spec lays down.
+- **Migrating existing on-device saves.** Nothing to migrate; see above.
 
 ## Owner-mandated technical constraints
 
@@ -84,24 +93,46 @@ directly implicated and one is load-bearing throughout:
 - **Principle II (Cost Consciousness)** — the constitution states that
   introducing any server-side component "is a constitutional cost question and
   requires explicit approval." This spec is that request. A monthly ceiling is
-  still unset ([NEEDS CLARIFICATION] Q2 below); FR-024 and SC-008 depend on it.
+  still unset ([NEEDS CLARIFICATION] Q2 below); FR-023 and SC-007 depend on it.
 - **Principle III (Pipeline-Only Deployments)** — as written, this principle
-  prohibits manual deploys to production. The owner has chosen hand deploys for
-  this release, with CI/CD to follow in the next spec. **This is a real
-  conflict, not a gray area.** The plan phase must resolve it one of two ways:
-  amend the constitution to scope Principle III to the frontend until backend
-  CI/CD lands, or record a time-boxed, explicitly justified deviation in the
-  plan's Complexity Tracking with the next spec as its expiry. It must not be
-  resolved by silence.
+  prohibits manual deploys to production. Backend deploys in this release are
+  manual. **Resolution: accepted as a time-boxed deviation, granted by the
+  owner on 2026-08-10.** See "Accepted deviation" below. The principle itself
+  is not amended; the frontend remains pipeline-only and unaffected.
 - **Principle IV (Storage Key Stability)** — `babyname-swipe-v3` remains the
-  on-device key and MUST NOT be renamed. It stops being the only copy of a
-  couple's history but keeps working as the offline cache and as the source for
-  the one-time import (User Story 4). No user may be forced back through
-  onboarding, and no pick may be discarded, by any part of this migration.
+  on-device key and MUST NOT be renamed, even though its role changes: it stops
+  being the system of record and becomes the offline cache. The value's shape
+  changes substantially (it must now hold a block of undealt names and a queue
+  of unsynced picks), and that evolution happens inside the value, per the
+  principle. Nothing in this feature may force a user back through onboarding
+  or discard a pick.
 - **Principle I (Muted Visual Design)** — the new sign-in surface is the first
   screen a user sees, and it follows the app's existing muted language, minimal
   motion, and mobile input conventions (`fontSize: 16`, safe-area insets,
   `minWidth: 0` on flex children).
+
+### Accepted deviation: manual backend deploys (Principle III)
+
+**Granted**: 2026-08-10, by the owner.
+
+**Scope**: backend service and database only. Frontend production deploys stay
+pipeline-only through the existing hand-written workflows, unchanged.
+
+**Rationale**: automating a deploy path before it has been walked once by hand
+encodes guesses. The first manual deploys are how the project learns what the
+pipeline actually needs to do — what has to be configured, what breaks, what
+order things must happen in. Building CI/CD first would mean writing a pipeline
+against an unknown target and then rewriting it.
+
+**Expiry**: the next spec, which covers backend CI/CD. This deviation ends when
+that work ships. It does not renew by default; extending it requires the same
+explicit grant again.
+
+**Compensating controls** while it is in force: `make check` is the gate
+(FR-026, FR-027), deploys follow a written runbook rather than improvisation
+(FR-024), schema changes go through ordered versioned migrations (FR-025), and
+the service exposes a health signal so a broken deploy is visible without
+reading logs (FR-028).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -113,9 +144,10 @@ either of them has made — is stored in their account. Signing in from a
 different browser, a reinstalled app, or a replacement phone brings all of it
 back exactly as it was.
 
-**Why this priority**: This is the whole point of the migration. Today a
-cleared browser cache is unrecoverable data loss for a couple who may have
-swiped thousands of names.
+**Why this priority**: This is the whole point of the re-platforming. In the
+current design a cleared browser cache would be unrecoverable loss for a couple
+who had swiped thousands of names — a liability worth removing before anyone
+has anything to lose.
 
 **Independent Test**: Sign in, swipe a distinctive set of names, sign in as the
 same account in a fresh browser profile, and verify the picks, matches,
@@ -207,39 +239,7 @@ right order with no duplicates and no losses.
 
 ---
 
-### User Story 4 - Nobody loses what they already swiped (Priority: P1)
-
-A couple who has been using the app locally for months opens it after this
-release, creates an account, and finds every name they had already swiped
-already there — same picks, same matches, same settings.
-
-**Why this priority**: Constitution IV exists because the browser's copy is
-currently the only copy. The moment accounts arrive is the single most
-dangerous moment in this app's history for user data, and it happens exactly
-once per user.
-
-**Independent Test**: Seed a browser with a realistic pre-migration save, run
-the new build, create an account, and verify a 100% match on picks, profile
-names, last name, and gender filter — then repeat the sign-in and verify
-nothing is imported twice.
-
-**Acceptance Scenarios**:
-
-1. **Given** existing on-device state, **When** the user first signs in,
-   **Then** all of it is imported into the account exactly once.
-2. **Given** an import has already happened, **When** the user signs in again
-   from the same device, **Then** nothing is re-imported and no pick is
-   duplicated or reverted.
-3. **Given** an import that fails partway, **When** it is retried, **Then** it
-   completes without duplicating what already landed, and the on-device copy is
-   left intact until the import is confirmed.
-4. **Given** a legacy save predating the profiles/gender-filter fields,
-   **When** it is imported, **Then** today's backfill defaults apply and the
-   user is not forced back through onboarding.
-
----
-
-### User Story 5 - A dev loop the agent can run unattended (Priority: P2)
+### User Story 4 - A dev loop the agent can run unattended (Priority: P2)
 
 A developer — or the coding agent — clones the repository, runs one command,
 and gets a full verification pass: linting, strict type checking, and tests
@@ -270,7 +270,7 @@ for both reasons with actionable output.
 
 ---
 
-### User Story 6 - Hand-deploy the service (Priority: P3)
+### User Story 5 - Hand-deploy the service (Priority: P3)
 
 The owner builds the container, pushes it, and rolls out a new backend version
 by hand with API keys held outside the repository. Database schema changes are
@@ -358,9 +358,9 @@ repository at any point.
 - **FR-008**: Matches and keeps MUST continue to derive from recorded picks
   rather than from the active pool, preserving 001's guarantee that a swiped
   name never vanishes from Matches.
-- **FR-009**: The existing on-device save under `babyname-swipe-v3` MUST remain
-  the offline cache. The key MUST NOT be renamed, and schema changes to its
-  value MUST follow the existing backward-compatible migration pattern.
+- **FR-009**: The on-device save under `babyname-swipe-v3` MUST become the
+  offline cache. The key MUST NOT be renamed; its value's shape may change
+  freely, since the app is pre-release and no save in the wild depends on it.
 - **FR-010**: Backup and restore MUST continue to round-trip a couple's state
   and MUST reconcile a restore with the account rather than leaving the two
   divergent.
@@ -402,35 +402,27 @@ repository at any point.
   service owns the served order, and the most recent value for a given
   (swiper, name) pick wins.
 
-**Migration**
-
-- **FR-023**: On a user's first sign-in, existing on-device state MUST be
-  imported into their account exactly once, without discarding any pick and
-  without forcing the user back through onboarding. The import MUST be safe to
-  retry, and the on-device copy MUST be preserved until the import is
-  confirmed.
-
 **Operations and development**
 
-- **FR-024**: Recurring cost MUST stay within the ceiling agreed at planning
+- **FR-023**: Recurring cost MUST stay within the ceiling agreed at planning
   time, with the cheapest viable hosting tier chosen and spend safeguards in
   place ([NEEDS CLARIFICATION] Q2).
-- **FR-025**: The repository MUST contain no credentials. Deployment
+- **FR-024**: The repository MUST contain no credentials. Deployment
   credentials are supplied out-of-band, and a written runbook MUST make the
   manual deploy repeatable by someone who has not done it before.
-- **FR-026**: Database schema changes MUST be applied as ordered, versioned
+- **FR-025**: Database schema changes MUST be applied as ordered, versioned
   migrations with a recorded applied state.
-- **FR-027**: A single command MUST run linting, strict type checking, and the
+- **FR-026**: A single command MUST run linting, strict type checking, and the
   full test suite against a disposable database, requiring no manual setup and
   no shared local database, and MUST report one overall pass/fail.
-- **FR-028**: Every behavioral change MUST originate as a test that fails
+- **FR-027**: Every behavioral change MUST originate as a test that fails
   before the implementation that satisfies it exists.
-- **FR-029**: The service MUST expose a health signal sufficient to tell
+- **FR-028**: The service MUST expose a health signal sufficient to tell
   "deployed and serving" from "deployed and broken" without reading logs.
 
 **Open**
 
-- **FR-030**: Whether the app can be used at all without an account MUST be
+- **FR-029**: Whether the app can be used at all without an account MUST be
   settled before planning ([NEEDS CLARIFICATION] Q1).
 
 ### Key Entities
@@ -458,30 +450,27 @@ repository at any point.
 - **SC-001**: A user who signs in on a brand-new browser sees 100% of their
   picks, matches, profile names, last name, and gender filter restored, with
   the first card on screen within 3 seconds on a normal connection.
-- **SC-002**: A user with existing on-device history who signs in for the first
-  time keeps 100% of their picks, with zero duplicates after repeated sign-ins,
-  and is never returned to onboarding.
-- **SC-003**: A swiper can complete a full block offline — every card, undo,
+- **SC-002**: A swiper can complete a full block offline — every card, undo,
   and the Matches screen — with zero errors, and 100% of those picks reach the
   account within 10 seconds of connectivity returning.
-- **SC-004**: An online swiper can go through 500+ names in a session without
+- **SC-003**: An online swiper can go through 500+ names in a session without
   a repeated name, without an empty-deck state, and without a visible pause at
   any block boundary.
-- **SC-005**: Both swipers on an account are served identical names in
+- **SC-004**: Both swipers on an account are served identical names in
   identical order, verified across two devices.
-- **SC-006**: Interrupting a sync at any point and retrying produces state
+- **SC-005**: Interrupting a sync at any point and retrying produces state
   identical to an uninterrupted sync, across at least 20 randomized
   interruption points.
-- **SC-007**: No account can read or modify another account's data — verified
+- **SC-006**: No account can read or modify another account's data — verified
   by test, not by inspection.
-- **SC-008**: Recurring monthly cost stays within the agreed ceiling, with a
+- **SC-007**: Recurring monthly cost stays within the agreed ceiling, with a
   measured figure recorded after the first full month.
-- **SC-009**: `make check` runs green on a clean clone with no manual setup, in
+- **SC-008**: `make check` runs green on a clean clone with no manual setup, in
   under 5 minutes, and every behavior in this feature traces to a test that
   failed before its implementation existed.
-- **SC-010**: Following the deploy runbook from scratch produces a working
+- **SC-009**: Following the deploy runbook from scratch produces a working
   service, and the repository contains zero credentials at every commit.
-- **SC-011**: The frontend bundle shrinks by roughly 217 KB gzip once the
+- **SC-010**: The frontend bundle shrinks by roughly 217 KB gzip once the
   corpus is no longer shipped, and cold load is no slower than today's.
 
 ## Assumptions
@@ -501,16 +490,18 @@ repository at any point.
   persistent sessions — the least-work option consistent with "nothing fancy."
   Social sign-in and passwordless flows are not ruled out later; they are just
   not worth the setup now.
-- **Existing local users are few and known**, so a one-time import path that
-  covers the documented save shapes (current and legacy) is sufficient; no
-  general-purpose data-recovery tooling is needed.
+- **The app is pre-release: there is no production data to preserve.** Owner
+  confirmed 2026-08-10. No migration of existing on-device saves is required,
+  no legacy save shapes need supporting, and the offline cache's value shape
+  can be redesigned freely. This removes what would otherwise have been the
+  riskiest part of the feature. The `babyname-swipe-v3` key itself still MUST
+  NOT be renamed (Constitution IV), and the local-only mode disappears in
+  favor of the account.
 - **The frontend stays where it is** — Azure Static Web Apps, deployed by the
   existing hand-written workflows. Only the backend is hand-deployed, and only
   until the next spec.
 - **The name corpus content is unchanged** from 001. This spec moves it; it
   does not curate, extend, or re-derive it.
-- **`babyname-swipe-v3` keeps its name and its role** as the offline cache. It
-  stops being the only copy of a couple's history, which is the point.
 
 ## Clarifications needed
 
@@ -518,19 +509,19 @@ Two decisions have no reasonable default and materially change the work.
 
 ### Q1: Is an account required to use the app at all?
 
-**Context**: FR-030. Today anyone can open the app and start swiping with no
+**Context**: FR-029. Today anyone can open the app and start swiping with no
 sign-up. Accounts are being added for durability, not for gating.
 
 | Option | Answer | Implications |
 |--------|--------|--------------|
 | A | Account required — sign-in is the first screen | Simplest to build and reason about; one state model, one sync path. Costs the app its zero-friction open-and-swipe start, and every new visitor hits a signup wall. |
-| B | Guest mode, with an optional upgrade to an account later | Preserves today's instant start; a guest's local swipes import when they eventually sign up. Meaningfully more work: two state models, and the import path from User Story 4 becomes a permanent feature rather than a one-time migration. |
+| B | Guest mode, with an optional upgrade to an account later | Preserves today's instant start; a guest's local swipes import when they eventually sign up. Meaningfully more work: two state models plus a permanent guest→account import path. Since the app is pre-release, that import path has no other justification — it exists solely to serve guest mode. |
 | C | Account required, but signup is one tap (passwordless / magic link) | Keeps a single state model while softening the wall. Friction is an email round-trip on first use rather than a password to invent. |
 | Custom | Provide your own answer | Describe when a user should first be asked to identify themselves. |
 
 ### Q2: What is the monthly cost ceiling for the backend?
 
-**Context**: FR-024, SC-008. Constitution II requires that a metered feature
+**Context**: FR-023, SC-007. Constitution II requires that a metered feature
 carry an explicit, user-approved budget and safeguards against unbounded spend.
 This is the first server-side component in the project's history.
 

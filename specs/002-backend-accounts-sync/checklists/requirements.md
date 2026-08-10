@@ -50,20 +50,31 @@
    introduced. Resolve via `/speckit-clarify` or answer inline before
    `/speckit-plan`.
 
-3. **Constitution III conflict is stated, not resolved.** Hand-deploying the
-   backend contradicts Pipeline-Only Deployments as currently written. The spec
-   flags it and names the two acceptable resolutions (amend the principle, or
-   record a time-boxed justified deviation in the plan). This is intentionally
-   left for the plan phase's gate rather than decided here.
+3. **Constitution III conflict — resolved 2026-08-10.** Hand-deploying the
+   backend contradicts Pipeline-Only Deployments as written. The owner granted
+   a **time-boxed deviation** rather than amending the principle: automating a
+   deploy path before walking it once by hand would mean writing a pipeline
+   against an unknown target. Scope is backend-only (the frontend stays
+   pipeline-only), the expiry is the next spec, and four compensating controls
+   are named. Recorded in the spec's "Accepted deviation" section; carry it
+   into the plan's Complexity Tracking verbatim at `/speckit-plan`.
 
-4. **2026-08-10: Renumbering.** This spec took the 002 slot; the AI criteria
+4. **Pre-release, confirmed 2026-08-10.** The app has no production data, so
+   the data-migration user story and its requirement were removed outright
+   rather than softened — no import path, no legacy save shapes, and the
+   offline cache's value shape is free to change. `babyname-swipe-v3` still
+   MUST NOT be renamed. This removed the highest-risk slice of the feature and
+   dropped it from 6 user stories to 5, 30 FRs to 29, and 11 SCs to 10.
+
+5. **2026-08-10: Renumbering.** This spec took the 002 slot; the AI criteria
    filter moved to [003-ai-name-filter](../../003-ai-name-filter/spec.md).
    Cross-references in 001, 003, and `CLAUDE.md` were updated. 003's
    served-order requirements (its FR-004/FR-005) are now satisfied by this
    spec's FR-012 and should be re-read as inherited rather than new when 003
    reaches planning.
 
-5. **Scope is a migration, not a capability.** The bar for "done" is that a
-   couple notices nothing except signing in. Feature parity (FR-007) and the
-   one-time import (FR-023) carry most of the risk; partner linking, CI/CD, and
-   criteria filtering are explicitly deferred.
+6. **Scope is a re-platforming, not a capability.** The bar for "done" is that
+   a couple notices nothing except signing in. With the migration slice gone,
+   feature parity (FR-007) and sync correctness (FR-019, FR-022) now carry the
+   risk; partner linking, CI/CD, and criteria filtering are explicitly
+   deferred.
