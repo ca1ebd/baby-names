@@ -4,8 +4,9 @@
 
 **Created**: 2026-08-10
 
-**Status**: Draft — 2 open clarifications (Q1 account requirement, Q2 cost
-ceiling). Pre-release confirmed and Principle III deviation granted 2026-08-10.
+**Status**: Draft — 1 open clarification (Q2, cost ceiling). Pre-release
+confirmed, Principle III deviation granted, and account model clarified
+2026-08-10.
 
 **Depends on**: [001-expanded-name-corpus](../001-expanded-name-corpus/spec.md)
 — the name corpus this feature moves off-device and serves from the backend.
@@ -93,7 +94,7 @@ directly implicated and one is load-bearing throughout:
 - **Principle II (Cost Consciousness)** — the constitution states that
   introducing any server-side component "is a constitutional cost question and
   requires explicit approval." This spec is that request. A monthly ceiling is
-  still unset ([NEEDS CLARIFICATION] Q2 below); FR-023 and SC-007 depend on it.
+  still unset ([NEEDS CLARIFICATION] Q2 below); FR-024 and SC-007 depend on it.
 - **Principle III (Pipeline-Only Deployments)** — as written, this principle
   prohibits manual deploys to production. Backend deploys in this release are
   manual. **Resolution: accepted as a time-boxed deviation, granted by the
@@ -129,10 +130,19 @@ that work ships. It does not renew by default; extending it requires the same
 explicit grant again.
 
 **Compensating controls** while it is in force: `make check` is the gate
-(FR-026, FR-027), deploys follow a written runbook rather than improvisation
-(FR-024), schema changes go through ordered versioned migrations (FR-025), and
+(FR-027, FR-028), deploys follow a written runbook rather than improvisation
+(FR-025), schema changes go through ordered versioned migrations (FR-026), and
 the service exposes a health signal so a broken deploy is visible without
-reading logs (FR-028).
+reading logs (FR-029).
+
+## Clarifications
+
+### Session 2026-08-10
+
+- Q: Should someone be able to open the app and start swiping without making an
+  account, or is signing in the first thing they do? → A: Option C — an
+  account is required, created and entered by passwordless email magic link.
+  No guest or anonymous mode. (Now FR-001/FR-002.)
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -158,14 +168,17 @@ profile names, and gender filter all match.
 1. **Given** a new visitor, **When** they create an account and complete the
    existing Welcome flow, **Then** their profile and settings persist to their
    account and the swipe screen behaves exactly as it does today.
-2. **Given** a signed-in user with picks recorded, **When** they sign in on a
+2. **Given** a visitor who is not signed in, **When** they open the app,
+   **Then** they are asked to sign in, and no deck, picks, or settings are
+   reachable until they do.
+3. **Given** a signed-in user with picks recorded, **When** they sign in on a
    different device or browser, **Then** every pick, match, profile name, last
    name, and the gender filter are restored identically.
-3. **Given** a signed-in user, **When** they sign out and back in, **Then** no
+4. **Given** a signed-in user, **When** they sign out and back in, **Then** no
    state is lost and they are not sent back through onboarding.
-4. **Given** two different accounts, **When** either signs in, **Then** neither
+5. **Given** two different accounts, **When** either signs in, **Then** neither
    can see or affect any part of the other's names, picks, or settings.
-5. **Given** a signed-in session, **When** the app is reopened days later,
+6. **Given** a signed-in session, **When** the app is reopened days later,
    **Then** the session is still valid and the user is not asked to sign in
    again for routine use.
 
@@ -302,6 +315,13 @@ repository at any point.
   the same fact; the served order is owned by the service, not by either
   device. The last write for a given (swiper, name) wins, and neither device
   ends up with a hole in its history.
+- **Magic link opened on a different device than requested**: the link signs in
+  the device that opens it, and the requesting device is not left stranded — it
+  either completes sign-in or clearly invites the user to try again.
+- **Magic link never arrives, or is used twice**: the app offers a resend
+  without losing whatever was already typed, and an already-consumed or expired
+  link produces a plain "this link has expired, request a new one" rather than
+  an error state.
 - **Session expires mid-swipe**: swiping continues through the loaded block.
   Re-authentication is requested at the next sync, and nothing swiped in the
   meantime is lost.
@@ -336,94 +356,92 @@ repository at any point.
 
 **Accounts and access**
 
-- **FR-001**: Users MUST be able to create an account, sign in, and sign out
-  using the hosting platform's built-in authentication, with no bespoke
-  credential handling.
-- **FR-002**: Sessions MUST persist across app restarts so routine use does not
+- **FR-001**: An account is REQUIRED to use the app. There is no guest or
+  anonymous mode, and no swiping happens before sign-in.
+- **FR-002**: Users MUST be able to create an account, sign in, and sign out by
+  passwordless email magic link, using the hosting platform's built-in
+  authentication. The app MUST NOT handle passwords, which means no
+  password-entry, forgot-password, or change-password surface exists.
+- **FR-003**: Sessions MUST persist across app restarts so routine use does not
   require repeated sign-in.
-- **FR-003**: One account MUST hold both swipers ("you" and "partner"), exactly
+- **FR-004**: One account MUST hold both swipers ("you" and "partner"), exactly
   as one browser does today. Linking two accounts is out of scope.
-- **FR-004**: All state MUST be scoped to its owning account. No request MUST
+- **FR-005**: All state MUST be scoped to its owning account. No request MUST
   be able to read or modify another account's names, picks, or settings.
-- **FR-005**: Signing out MUST clear cached account state from the device.
+- **FR-006**: Signing out MUST clear cached account state from the device.
 
 **State ownership and parity**
 
-- **FR-006**: The service MUST store, per account: both swiper labels, the last
+- **FR-007**: The service MUST store, per account: both swiper labels, the last
   name, the gender filter, the onboarded flag, and every pick keyed by name
   with its keep/no value.
-- **FR-007**: The app MUST retain full feature parity with the current release
+- **FR-008**: The app MUST retain full feature parity with the current release
   — Welcome, swipe, Matches, Settings, backup/restore, the update toast, and
   every existing interaction behaves as it does today.
-- **FR-008**: Matches and keeps MUST continue to derive from recorded picks
+- **FR-009**: Matches and keeps MUST continue to derive from recorded picks
   rather than from the active pool, preserving 001's guarantee that a swiped
   name never vanishes from Matches.
-- **FR-009**: The on-device save under `babyname-swipe-v3` MUST become the
+- **FR-010**: The on-device save under `babyname-swipe-v3` MUST become the
   offline cache. The key MUST NOT be renamed; its value's shape may change
   freely, since the app is pre-release and no save in the wild depends on it.
-- **FR-010**: Backup and restore MUST continue to round-trip a couple's state
+- **FR-011**: Backup and restore MUST continue to round-trip a couple's state
   and MUST reconcile a restore with the account rather than leaving the two
   divergent.
 
 **Names and served order**
 
-- **FR-011**: The service MUST own the global name list and serve names to the
+- **FR-012**: The service MUST own the global name list and serve names to the
   app in blocks. The frontend MUST NOT ship the corpus.
-- **FR-012**: The service MUST record the order in which names are dealt to an
+- **FR-013**: The service MUST record the order in which names are dealt to an
   account, shared by both swipers, so that both swipers see the same names in
   the same order — the record [003](../003-ai-name-filter/spec.md) builds on.
-- **FR-013**: Served names MUST honor the account's girl/boy/both filter and
+- **FR-014**: Served names MUST honor the account's girl/boy/both filter and
   preserve today's ordering character: familiar names first, with occasional
   deeper draws, and identical ordering for both swipers on the account.
-- **FR-014**: The system MUST never serve a duplicate — no name appears twice
+- **FR-015**: The system MUST never serve a duplicate — no name appears twice
   in an account's served order, and no name is re-served to a swiper who
   already swiped it.
-- **FR-015**: Girl and boy name sets MUST continue to share zero spellings, so
+- **FR-016**: Girl and boy name sets MUST continue to share zero spellings, so
   that picks keyed by name alone cannot collide across genders.
-- **FR-016**: When a swiper has genuinely reached the end of the available
+- **FR-017**: When a swiper has genuinely reached the end of the available
   names, the app MUST say so plainly rather than presenting an empty deck.
 
 **Offline and sync**
 
-- **FR-017**: Once a block is loaded, swiping, undo, and Matches MUST work
+- **FR-018**: Once a block is loaded, swiping, undo, and Matches MUST work
   fully offline, with no perceptible delay and no error state.
-- **FR-018**: Picks made offline MUST be held on the device and synced to the
+- **FR-019**: Picks made offline MUST be held on the device and synced to the
   account automatically when connectivity returns or when the next block is
   requested, whichever comes first.
-- **FR-019**: Sync MUST be idempotent and safe to retry: repeating or
+- **FR-020**: Sync MUST be idempotent and safe to retry: repeating or
   interrupting it MUST produce the same result as one clean sync, with no
   duplicated, dropped, or reordered picks.
-- **FR-020**: The next block MUST be requested before the current one is
+- **FR-021**: The next block MUST be requested before the current one is
   exhausted, so an online swiper never waits at the end of a block.
-- **FR-021**: If the block is exhausted while offline, the app MUST show a
+- **FR-022**: If the block is exhausted while offline, the app MUST show a
   friendly explanation, preserve all picks and matches, and resume on its own
   when connectivity returns.
-- **FR-022**: Concurrent use of one account on two devices MUST converge: the
+- **FR-023**: Concurrent use of one account on two devices MUST converge: the
   service owns the served order, and the most recent value for a given
   (swiper, name) pick wins.
 
 **Operations and development**
 
-- **FR-023**: Recurring cost MUST stay within the ceiling agreed at planning
+- **FR-024**: Recurring cost MUST stay within the ceiling agreed at planning
   time, with the cheapest viable hosting tier chosen and spend safeguards in
   place ([NEEDS CLARIFICATION] Q2).
-- **FR-024**: The repository MUST contain no credentials. Deployment
+- **FR-025**: The repository MUST contain no credentials. Deployment
   credentials are supplied out-of-band, and a written runbook MUST make the
   manual deploy repeatable by someone who has not done it before.
-- **FR-025**: Database schema changes MUST be applied as ordered, versioned
+- **FR-026**: Database schema changes MUST be applied as ordered, versioned
   migrations with a recorded applied state.
-- **FR-026**: A single command MUST run linting, strict type checking, and the
+- **FR-027**: A single command MUST run linting, strict type checking, and the
   full test suite against a disposable database, requiring no manual setup and
   no shared local database, and MUST report one overall pass/fail.
-- **FR-027**: Every behavioral change MUST originate as a test that fails
+- **FR-028**: Every behavioral change MUST originate as a test that fails
   before the implementation that satisfies it exists.
-- **FR-028**: The service MUST expose a health signal sufficient to tell
+- **FR-029**: The service MUST expose a health signal sufficient to tell
   "deployed and serving" from "deployed and broken" without reading logs.
-
-**Open**
-
-- **FR-029**: Whether the app can be used at all without an account MUST be
-  settled before planning ([NEEDS CLARIFICATION] Q1).
 
 ### Key Entities
 
@@ -472,6 +490,9 @@ repository at any point.
   service, and the repository contains zero credentials at every commit.
 - **SC-010**: The frontend bundle shrinks by roughly 217 KB gzip once the
   corpus is no longer shipped, and cold load is no slower than today's.
+- **SC-011**: A brand-new user gets from first launch to their first card in
+  under 90 seconds including the email round-trip, and returning users reach
+  the deck without any sign-in step at all.
 
 ## Assumptions
 
@@ -486,10 +507,6 @@ repository at any point.
 - **Block size is a planning decision**, sized so a realistic offline session
   fits inside one block. Roughly 100 names is the working assumption, matching
   the batch size 003 already specifies.
-- **Auth is email and password via the platform's built-in provider**, with
-  persistent sessions — the least-work option consistent with "nothing fancy."
-  Social sign-in and passwordless flows are not ruled out later; they are just
-  not worth the setup now.
 - **The app is pre-release: there is no production data to preserve.** Owner
   confirmed 2026-08-10. No migration of existing on-device saves is required,
   no legacy save shapes need supporting, and the offline cache's value shape
@@ -505,23 +522,12 @@ repository at any point.
 
 ## Clarifications needed
 
-Two decisions have no reasonable default and materially change the work.
-
-### Q1: Is an account required to use the app at all?
-
-**Context**: FR-029. Today anyone can open the app and start swiping with no
-sign-up. Accounts are being added for durability, not for gating.
-
-| Option | Answer | Implications |
-|--------|--------|--------------|
-| A | Account required — sign-in is the first screen | Simplest to build and reason about; one state model, one sync path. Costs the app its zero-friction open-and-swipe start, and every new visitor hits a signup wall. |
-| B | Guest mode, with an optional upgrade to an account later | Preserves today's instant start; a guest's local swipes import when they eventually sign up. Meaningfully more work: two state models plus a permanent guest→account import path. Since the app is pre-release, that import path has no other justification — it exists solely to serve guest mode. |
-| C | Account required, but signup is one tap (passwordless / magic link) | Keeps a single state model while softening the wall. Friction is an email round-trip on first use rather than a password to invent. |
-| Custom | Provide your own answer | Describe when a user should first be asked to identify themselves. |
+One decision remains open. It has no reasonable default and materially changes
+the work.
 
 ### Q2: What is the monthly cost ceiling for the backend?
 
-**Context**: FR-023, SC-007. Constitution II requires that a metered feature
+**Context**: FR-024, SC-007. Constitution II requires that a metered feature
 carry an explicit, user-approved budget and safeguards against unbounded spend.
 This is the first server-side component in the project's history.
 
