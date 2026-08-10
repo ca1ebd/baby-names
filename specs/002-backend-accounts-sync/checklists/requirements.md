@@ -92,14 +92,24 @@
    four clauses are stale. Recommended as a separate PATCH-level
    `/speckit-constitution` update, not folded into this feature's branch.
 
-7. **Research changed the plan in three places** — worth re-reading before
-   `/speckit-tasks`: the free database pauses after 7 days and is eventually
-   deleted (a keep-alive is mandatory, not an optimization); Supabase's
-   built-in email sender cannot deliver magic links to anyone outside the
-   project team, so a free-tier SMTP provider is a new hard dependency of
-   FR-002; and the frontend's deck algorithm has a float64 underflow that makes
-   ~71% of the core sort by strict rank, which the port must reproduce rather
-   than fix.
+7. **Research changed the plan in three places**, all resolved with the owner
+   on 2026-08-10:
+   - *The free database deletes itself if left alone.* Pauses after 7 days,
+     manual restore, eventual permanent deletion. Mitigated by a **daily
+     scheduled Container Apps job** pinging the database directly — same free
+     grant (~75 of 180,000 vCPU-seconds/month), no dependency on GitHub, and
+     not routed through the HTTP app so an application bug cannot cause data
+     loss. Daily rather than weekly, because a 7-day cadence has no margin for
+     one failed run.
+   - *Built-in auth email only reaches project-team addresses*, 2/hour. Shipping
+     on it anyway; the limit is recorded as a spec assumption and the SMTP work
+     is deferred to `docs/remaining-items.md`. Consequence: nobody outside the
+     project team can sign in this release, and tests must never touch real
+     email.
+   - *The deck algorithm underflows*, making ~71% of the core sort by strict
+     rank past card ~2,118. The port reproduces it faithfully; the bug is
+     written up with a reproduction script in `docs/remaining-items.md` as a
+     product question rather than a patch.
 
 8. **Scope is a re-platforming, not a capability.** The bar for "done" is that
    a couple notices nothing except signing in. With the migration slice gone,

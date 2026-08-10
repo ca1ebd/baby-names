@@ -387,7 +387,8 @@ repository at any point.
 - **FR-002**: Users MUST be able to create an account, sign in, and sign out by
   passwordless email magic link, using the hosting platform's built-in
   authentication. The app MUST NOT handle passwords, which means no
-  password-entry, forgot-password, or change-password surface exists.
+  password-entry, forgot-password, or change-password surface exists. For this
+  release, delivery is limited to pre-authorized addresses — see Assumptions.
 - **FR-003**: Sessions MUST persist across app restarts so routine use does not
   require repeated sign-in.
 - **FR-004**: One account MUST hold both swipers ("you" and "partner"), exactly
@@ -582,6 +583,17 @@ repository at any point.
   path (FR-030) is the agreed mitigation rather than paid always-warm hosting.
   If the mitigation proves insufficient in practice, the answer is a new
   conversation about budget, not a quiet upgrade.
+- **Sign-in works only for pre-authorized addresses this release.** Magic links
+  are sent by the platform's built-in auth email service, which delivers only to
+  addresses on the project team and caps at 2 messages per hour. Both users'
+  addresses are added to the project directly; nobody else can create an
+  account until a real email provider is configured. This is a deliberate
+  deferral for a pre-release app with two known users — standing up a fourth
+  external service to serve two allow-listed addresses is work with no payoff
+  yet — and it is the one limit that must be lifted before anyone else can use
+  the app. Tracked in [docs/remaining-items.md](../../docs/remaining-items.md).
+  A practical consequence: automated tests MUST NOT exercise real email
+  delivery, or the hourly cap will make the suite unrunnable.
 - **The frontend stays where it is** — Azure Static Web Apps, deployed by the
   existing hand-written workflows. Only the backend is hand-deployed, and only
   until the next spec.

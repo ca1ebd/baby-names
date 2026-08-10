@@ -3,9 +3,9 @@
 **Created**: 2026-08-10
 **Purpose**: Resolve the unknowns in the plan's Technical Context before design.
 
-Five questions had to be answered before this feature could be designed
-honestly. Three of them changed the plan; one of them nearly invalidates the
-$0 cost posture and is the most important thing in this document.
+Six questions had to be answered before this feature could be designed
+honestly. Three of them changed the plan, and one of them — the free database
+quietly deleting itself — is the most important thing in this document.
 
 ---
 
@@ -56,24 +56,38 @@ This is a materially worse failure mode than the cold start in §1, and the spec
 already flagged it as needing a plan-time answer (see the "Free-tier database
 suspended after prolonged inactivity" edge case). The answer:
 
-- **A scheduled daily ping** against `GET /health`, which touches the database
-  (`SELECT 1`), keeps the 7-day clock from ever starting. A GitHub Actions
-  `schedule:` workflow does this for free.
-- **This is not CI/CD** and does not breach the spec's deferral of it. It
-  builds nothing and deploys nothing; it is a liveness heartbeat. Calling it
-  out explicitly so the next spec's scope stays clean.
-- **Caveat to document in the runbook**: GitHub disables scheduled workflows in
-  repositories with no activity for 60 days. A repo that goes quiet for two
-  months loses its heartbeat, and seven days later the database pauses. The
-  runbook must say so.
+- **A scheduled Azure Container Apps job**, running **daily**, executing a
+  direct `SELECT 1` against the database. Container Apps jobs draw on the *same*
+  Consumption free grant as the service (180,000 vCPU-seconds/month) and are
+  billed only while executing, with no idle charge. A ~10-second daily run at
+  0.25 vCPU costs about **75 vCPU-seconds per month** — roughly 0.04% of the
+  grant. It stays $0.
+- **Daily, not weekly.** Supabase's heuristic is "a few user requests to the
+  database each day over the previous week." A 7-day cadence has no margin: one
+  failed run and the threshold is already crossed. Daily gives seven chances to
+  survive a single failure.
+- **It pings the database directly, not `GET /health`.** The job's one purpose
+  is keeping the database alive, and routing that through the HTTP app would
+  mean an application bug also destroys the database. It runs the same container
+  image with a `keepalive` entrypoint, so it shares the service's deploy path
+  and connection configuration without sharing its failure modes.
+- **This is not CI/CD** and does not breach the spec's deferral of it. It builds
+  nothing and deploys nothing; it is a liveness heartbeat.
 - **Backups**: because permanent deletion is on the table, the manual deploy
   runbook must include a periodic `pg_dump`. The app's existing Copy Backup
   feature covers a couple's own picks but not the account or corpus tables.
 
-**Alternatives considered**: relying on organic traffic (two users on parental
-leave will not reliably hit it every week); a paid plan (violates FR-024);
-`pg_cron` inside Supabase (does not count as *user* activity for the pause
-heuristic, so it does not help).
+**Alternatives considered**: a **GitHub Actions `schedule:` workflow** — free
+and trivial, but GitHub disables scheduled workflows in repositories with no
+activity for 60 days, so a quiet repo loses its heartbeat and the database
+pauses a week later; that failure mode is invisible until the database is
+already gone. An **Azure Functions timer trigger** — also free and a fine fit,
+but it introduces a second compute service, a second deploy path, and a second
+thing to configure in the runbook, for no advantage over a job in the
+environment that already exists. Relying on **organic traffic** (two users on
+parental leave will not reliably hit it every week). A **paid plan** (violates
+FR-024). **`pg_cron` inside Supabase** (does not count as *user* activity for
+the pause heuristic, so it does not help).
 
 ---
 
@@ -99,34 +113,48 @@ latency and a hard dependency on Supabase being up for every single request.
 
 ---
 
-## 4. Can magic-link auth actually send email on the free tier? *(no)*
+## 4. Can magic-link auth actually send email on the free tier? *(barely)*
 
-**Decision**: A **custom SMTP provider is required**. Supabase's built-in email
-sender cannot be used for this feature.
+**Decision**: Ship on Supabase's **built-in** sender, accepting that only
+project-team addresses can sign in. Real SMTP is deferred and recorded in
+[docs/remaining-items.md](../../docs/remaining-items.md).
 
 Supabase's built-in auth email service is capped at **2 emails per hour** and —
 decisively — **only delivers to addresses belonging to the project's team**. It
 is explicitly a testing facility, not a production sender.
 
-For a feature whose entire sign-in flow is "we email you a link," that is a
-blocker, not an inconvenience. Two failed sign-in attempts would lock a user
-out for an hour, and nobody outside the project team could ever create an
-account.
+For a feature whose sign-in flow is "we email you a link," that would normally
+be a blocker. It is survivable here for one reason only: the app is pre-release
+with two known users, and both of their addresses can simply be added to the
+Supabase project team. The owner chose to defer the SMTP work rather than stand
+up a fourth external service for two people.
 
-**What this means**: FR-002 (passwordless magic link) carries an implicit
-dependency the spec did not name — a third-party email sender. It must be on a
-free tier to satisfy FR-024. Resend's free allowance (on the order of thousands
-of emails/month) is far beyond what a two-person app needs, and Brevo and
-Mailgun have comparable free tiers. Any of them satisfies the constraint;
-the choice is a runbook detail, not an architectural one.
+**What this costs, stated plainly**:
 
-With custom SMTP configured, Supabase's own auth rate limit rises to ~30 new
-users/hour, which is irrelevant at this scale.
+- **Nobody outside the project team can create an account.** Not "sign-in is
+  slow for them" — no link is ever delivered. This bounds who can use the app
+  for the whole of this release.
+- **The partner's address must be added to the project team** before they can
+  sign in at all. This is a deploy-runbook step, not an application concern,
+  and it is the first thing to check when sign-in "doesn't work" for them.
+- **The 2/hour cap will bite during development.** Manually exercising the
+  sign-in flow more than twice in an hour locks you out. Automated tests must
+  therefore never go through real email: backend tests mint JWTs directly
+  against the JWKS fixture, and local work uses the Supabase CLI's local mail
+  catcher.
 
-**This is a new external dependency and the owner should know about it.** It
-does not change the answer to the clarification (magic link is still the least
-work overall), but "no passwords to handle" now comes with "an SMTP account to
-configure and keep alive."
+**Consequence for the spec**: FR-001/FR-002 as written imply anyone can create
+an account. For this release that is true only of authorized addresses, so the
+spec carries an explicit assumption recording the limit and pointing at the
+deferred work.
+
+**Alternatives considered**: configuring a free-tier provider now (Resend,
+Brevo, Mailgun all have allowances far beyond this app's needs) — correct, and
+what the remaining-items entry describes, but it is a fourth service to set up
+and keep alive in service of two users whose addresses can be allow-listed in
+30 seconds. Falling back to email+password to dodge email entirely — rejected
+at clarification, and it would trade one afternoon of SMTP setup for permanent
+password-reset UI.
 
 ---
 
@@ -177,7 +205,9 @@ tie-break that JavaScript provided implicitly is explicit and portable. Python's
 tie-break exists so the behavior survives a move into SQL later.
 
 **Recorded for a future spec**: whether the deep core *should* be shuffled is a
-real product question. It is deliberately not answered here.
+real product question, written up with a reproduction script in
+[docs/remaining-items.md](../../docs/remaining-items.md). It is deliberately
+not answered here.
 
 ### Where the computation runs
 

@@ -16,10 +16,9 @@ against Supabase's JWKS.
 The design is shaped by three research findings more than by anything else: a
 $0 bill is achievable on Container Apps only with a Consumption environment
 scaled to zero; a free Supabase project **pauses after 7 days of inactivity and
-is eventually deleted**, so a scheduled heartbeat is mandatory rather than
-optional; and Supabase's built-in email sender cannot deliver magic links to
-anyone outside the project team, so a third-party SMTP provider is a hard
-dependency. See [research.md](research.md).
+is eventually deleted**, so a daily heartbeat is mandatory rather than optional;
+and Supabase's built-in email sender only delivers to project-team addresses,
+which bounds who can use this release. See [research.md](research.md).
 
 Deck order is reproduced from the frontend's existing algorithm bit-for-bit,
 including a float64 underflow that makes ~71% of the core sort by strict rank —
@@ -63,7 +62,7 @@ usage is a rounding error against it.
 | Principle | Status | Notes |
 |---|---|---|
 | I. Muted Visual Design | **PASS** | The sign-in screen is new UI and adopts the existing palette, minimal motion, `fontSize: 16` inputs, safe-area insets, `minWidth: 0` on flex children. No new visual language. |
-| II. Cost Consciousness | **PASS with conditions** | $0 target with a documented cost profile (research §1), spend safeguards (FR-032 rate cap, Azure spend alert), cheapest viable tiers. Two config details are load-bearing: Consumption workload profile and `minReplicas: 0`. Adds one new external dependency — a free-tier SMTP provider (research §4). |
+| II. Cost Consciousness | **PASS** | $0 target with a documented cost profile (research §1), spend safeguards (FR-032 rate cap, Azure spend alert), cheapest viable tiers. Two config details are load-bearing: Consumption workload profile and `minReplicas: 0`. The daily keep-alive job draws ~75 vCPU-seconds/month against a 180,000 grant. No new paid or external service is introduced. |
 | III. Pipeline-Only Deployments | **VIOLATION — justified** | Backend deploys are manual this release. Time-boxed deviation granted by the owner 2026-08-10; see Complexity Tracking. Frontend remains pipeline-only and untouched. |
 | IV. Storage Key Stability | **PASS** | `babyname-swipe-v3` keeps its name. Its value is reshaped (block cache + unsynced-pick queue), which the principle permits — schema evolution happens inside the value. Pre-release, so no save in the wild is affected. |
 | V. No AI Vendor Attribution | **PASS** | Branch, commits, and artifacts are clean. |
@@ -95,12 +94,12 @@ describing a pool that has not existed since 001. Recommended as a PATCH-level
 ### Post-Phase 1 re-evaluation
 
 Re-checked after the design below was complete. No new violations. The design
-adds one thing the initial check did not anticipate: a **scheduled keep-alive
-workflow** (research §2). It is not a deploy and not CI/CD — it builds nothing
-and ships nothing — so it neither breaches Principle III nor the spec's
-deferral of CI/CD to the next spec. It is included here because without it the
-free database pauses in 7 days and is eventually deleted, which no amount of
-application code can survive.
+adds one thing the initial check did not anticipate: a **daily scheduled
+Container Apps job** that pings the database (research §2). It is not a deploy
+and not CI/CD — it builds nothing and ships nothing — so it neither breaches
+Principle III nor the spec's deferral of CI/CD to the next spec. It is included
+because without it the free database pauses in 7 days and is eventually
+deleted, which no amount of application code can survive.
 
 ## Project Structure
 
@@ -138,6 +137,7 @@ api/
 │   ├── schemas/             # Pydantic v2 request/response models
 │   ├── deck.py              # LCG + weighted shuffle, faithful float64 port
 │   ├── routers/             # health, state, settings, deck, picks
+│   ├── keepalive.py         # entrypoint for the daily scheduled job
 │   └── corpus/names.json    # generated, shared source with the client corpus
 └── tests/
     ├── conftest.py          # session-scoped Postgres container, per-test rollback
@@ -156,8 +156,8 @@ src/                         # existing frontend
 
 .github/workflows/
 ├── azure-static-web-apps.yml          # unchanged (prod frontend)
-├── azure-static-web-apps-staging.yml  # unchanged (staging frontend)
-└── keepalive.yml                      # NEW — daily GET /health; not a deploy
+└── azure-static-web-apps-staging.yml  # unchanged (staging frontend)
+                                       # unchanged — no new workflow
 ```
 
 **Structure Decision**: The service lives in `api/` at the repo root beside the
@@ -177,6 +177,12 @@ carries the Supabase JWT, verified offline against cached JWKS (research §3).
 The account id *is* the Supabase user id, so there is no user table to keep in
 sync. Signing out clears the cached block and any unsynced picks after a
 flush attempt.
+
+Magic links are sent by Supabase's **built-in** sender this release, which only
+delivers to project-team addresses (research §4). Both users' emails must be
+added to the Supabase project — a runbook step, not application logic — and
+nobody else can create an account until real SMTP lands. That work is deferred
+and written up in [docs/remaining-items.md](../../docs/remaining-items.md).
 
 **Parity and state (FR-007–011)**. The service stores the same object the app
 persists today, normalized: swiper labels and positions, last name, gender
@@ -199,15 +205,19 @@ devices converge on last-write-wins (FR-023) without coordination. The next
 block is requested at a low-water mark, not at exhaustion.
 
 **Cost and abuse (FR-024, FR-032)**. Consumption environment, `minReplicas: 0`,
-free Supabase plan, free SMTP tier, Azure spend alert at any nonzero amount.
+free Supabase plan, the built-in auth email sender, Azure spend alert at any
+nonzero amount.
 Rate limiting is a Postgres fixed-window row per (account, hour) — see
 research §6 for why in-memory counting would enforce nothing here.
 
 **Cold start and liveness (FR-030, FR-031)**. The client fires `GET /health`
 on load, before sign-in, so the container wakes and the database is touched
-while the user is still reading the sign-in screen. The same endpoint is what
-the daily keep-alive workflow hits. Every waking/unreachable/rate-limited state
-renders as the one friendly waiting state, never an error.
+while the user is still reading the sign-in screen. Separately, a **daily
+Container Apps job** runs the same image under a `keepalive` entrypoint and
+issues a direct `SELECT 1` — deliberately not routed through the HTTP app, so
+an application bug cannot let the database lapse. Every
+waking/unreachable/rate-limited state renders as the one friendly waiting
+state, never an error.
 
 **Dev loop (FR-026–028)**. `make check` runs `ruff check`, `pyright --strict`,
 and `pytest` against a testcontainers Postgres, reporting one pass/fail. Every
