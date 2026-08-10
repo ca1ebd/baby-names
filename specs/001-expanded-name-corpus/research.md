@@ -89,12 +89,12 @@ Observed first cards after tuning: *Alannah, Josephine, Olivia, Kylie, Sloane,
 Josephina, Favour, Sloan, Emma, Makena* (girl) and *Antonio, Jacob, Elias,
 Donovan, Kashmir, Flynn, Noah, Fox, Brennan, Max* (boy).
 
-**Retained for spec 002**: the core/tail boundary is exactly the "common names"
+**Retained for spec 003**: the core/tail boundary is exactly the "common names"
 tier a criteria filter wants for "common but not top-10" style requests.
 
 **Alternatives rejected**: keeping a name in both gender pools (breaks the
 no-overlap invariant that makes name-keyed picks safe); curating the corpus
-down to a hand-picked list (the owner's decision stands — narrowing is 002's
+down to a hand-picked list (the owner's decision stands — narrowing is 003's
 job, and the tail stays reachable); ranking the core by all-time or since-1995
 counts (surfaces *Mary, Patricia, Linda* and other names no longer in use).
 

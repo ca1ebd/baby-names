@@ -29,7 +29,7 @@ export const BOY_CORPUS: string[];
   ≈7,457 / ≈5,707; a larger swing signals a source or parsing regression.
 - Header comment records source and generation date for provenance.
 
-**Consumers**: `src/BabyNameSwipe.tsx` only. Spec 002 may additionally read
+**Consumers**: `src/BabyNameSwipe.tsx` only. Spec 003 may additionally read
 rank (array index) for popularity-based criteria.
 
 ## 2. Build script — `scripts/build-name-corpus.mjs`

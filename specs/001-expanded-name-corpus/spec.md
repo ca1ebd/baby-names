@@ -9,13 +9,13 @@
 **Input**: Split from the original "AI Custom Name Deck" description: before
 any AI filtering, swap the small hand-built name pool for a generic, much
 larger list of real names. The AI criteria feature
-([002-ai-name-filter](../002-ai-name-filter/spec.md)) then filters this list.
+([003-ai-name-filter](../003-ai-name-filter/spec.md)) then filters this list.
 
 **Scope note**: This feature changes *what fills the deck*, nothing else. The
 app's existing deck behavior — both swipers walking the same fixed order, each
 skipping names they've already swiped — is a property of serving a static,
 deterministically ordered list, and continues to hold with a larger list at no
-extra cost. Machinery for a *changeable* deck belongs to 002, which is the
+extra cost. Machinery for a *changeable* deck belongs to 003, which is the
 first feature that can change one.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -98,11 +98,11 @@ Matches screen and each swiper's keeps are unchanged.
 - **Old stylistic restrictions retire**: the no-D-starts / no-"ey"-endings
   rules were build-time properties of the hand-built pool and are deliberately
   dropped — the app is generic now. Users who want such rules get them at
-  runtime when 002 ships.
+  runtime when 003 ships.
 - **Obscure names deeper in the deck**: the corpus keeps its long tail, so
   genuinely rare spellings are still in play — they are simply dealt later,
   after the core. The deck is never narrowed by removing them; narrowing to a
-  user's taste remains the job of the criteria feature (002).
+  user's taste remains the job of the criteria feature (003).
 - **Corpus exhausted**: unreachable in practice at this corpus size, but the
   existing end-of-deck message stays as-is.
 - **Storage growth**: the corpus ships with the app, not in the save; device
@@ -182,13 +182,13 @@ Matches screen and each swiper's keeps are unchanged.
 - **Floor, not curation**: every spelling with at least 25 recorded births is
   included; only the source's one-off spellings are dropped. Deck *feel* is
   handled by ordering rather than by removing names, so the tail stays
-  reachable and criteria filtering (002) still has the full field to work
+  reachable and criteria filtering (003) still has the full field to work
   with.
 - **Corpus curation happens at build time** (a static artifact shipped with
   the app); no network access is needed for any behavior in this feature.
 - **Deck ordering stays deterministic and shared**, as today — this is what
   makes both swipers walk the same path without any new bookkeeping. Only a
-  feature that changes the deck at runtime (002) needs more than this.
+  feature that changes the deck at runtime (003) needs more than this.
 - **A one-time reshuffle at upgrade is acceptable**; matching is unaffected
   because picks are keyed by name spelling.
 - **English-language/Latin-script names** for the first release.

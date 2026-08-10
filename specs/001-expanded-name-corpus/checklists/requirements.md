@@ -32,13 +32,13 @@
 ## Notes
 
 - Split 2026-08-08 from the combined "AI Custom Name Deck" spec (now
-  [002-ai-name-filter](../../002-ai-name-filter/spec.md)) so the corpus swap
+  [003-ai-name-filter](../../003-ai-name-filter/spec.md)) so the corpus swap
   ships first. All clarifications were resolved in the combined spec before
   the split; no open markers carried over.
 - Rescoped 2026-08-08 after review: the explicit deck-sequence/replay
-  machinery was removed and moved to 002. Shared swipe order is already an
+  machinery was removed and moved to 003. Shared swipe order is already an
   emergent property of serving a static, deterministically ordered list, so it
-  costs nothing here; only 002 can change the deck mid-flight and therefore
+  costs nothing here; only 003 can change the deck mid-flight and therefore
   needs the bookkeeping. The former hand-built stylistic restrictions
   (no D-starts, no -y/-ie/-ey endings) are dropped — the corpus is generic.
 - The migration requirement that replaced it is concrete: keeps and matches

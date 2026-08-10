@@ -1,15 +1,28 @@
 # Feature Specification: AI Name Filter
 
-**Feature Branch**: `expanded-name-corpus`
+**Feature Branch**: `ai-name-filter`
 
 **Created**: 2026-08-08
 
-**Status**: Draft — clarifications resolved 2026-08-08; split 2026-08-08
+**Status**: Draft — clarifications resolved 2026-08-08; split 2026-08-08;
+renumbered 002 → 003 on 2026-08-10 (see note below)
 
 **Depends on**: [001-expanded-name-corpus](../001-expanded-name-corpus/spec.md)
-— the bundled real-name corpus this feature filters. That corpus ships
-complete and uncurated (~106,000 names), on the explicit understanding that
-narrowing it is *this* feature's job.
+— the real-name corpus this feature filters. That corpus ships complete and
+uncurated (~106,000 names), on the explicit understanding that narrowing it is
+*this* feature's job. Also depends on
+[002-backend-accounts-sync](../002-backend-accounts-sync/spec.md), which moves
+the name list, the served order, and swiper state off-device.
+
+**Renumbered 2026-08-10**: this spec was 002. The owner judged that building
+criteria filtering on top of purely local state was the cart before the horse,
+so the backend/accounts/sync work became 002 and this became 003. The
+substance of this spec is unchanged, but two of its assumptions now belong to
+002 and must be re-read at *this* spec's planning time: the served-order record
+(FR-004/FR-005, User Story 3) is 002's plumbing rather than something this
+feature introduces, and "the corpus is bundled on-device" is no longer true —
+names are served from the backend. Neither changes what a user gets; both
+change where the work lands.
 
 **Commercial context (2026-08-08)**: the owner expects criteria filtering to
 become a **paid tier**. That does not change what this spec requires, but it

@@ -125,7 +125,7 @@ runs at development time, never in the app or the deploy pipeline.
 2. **Rank is array position.** Names are emitted ordered by descending
    popularity (births since 1995), so index *is* the popularity rank. FR-001's
    "popularity retained for later features" costs zero extra bytes, and spec
-   002 can use it directly for "common but not top-10" criteria — which at this
+   003 can use it directly for "common but not top-10" criteria — which at this
    corpus size is the main lever for taming deck quality.
 
 2b. **Corpus size and deck feel are separate knobs.** A 25-birth floor removes

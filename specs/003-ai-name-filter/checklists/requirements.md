@@ -43,6 +43,10 @@
   path for free; this is the first feature that can change the deck
   mid-flight, so it owns the bookkeeping (FR-004/FR-005, User Story 3).
   Re-validated; all items pass.
+- 2026-08-10: Renumbered 002 → 003; backend/accounts/sync took the 002 slot.
+  The checklist still passes as written, but two items are now inherited
+  rather than owned here — the served-order record and the source of the name
+  list both move to 002. Re-validate at planning time against 002's contracts.
 - Filtering best-practice research lives in [research.md](../research.md);
   corpus sourcing research moved to
   [001's research note](../../001-expanded-name-corpus/research.md).
