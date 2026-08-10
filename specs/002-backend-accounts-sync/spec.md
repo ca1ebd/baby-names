@@ -14,7 +14,7 @@ III deviation granted, account model and cost posture clarified 2026-08-10.
 filtering was originally 002 and was renumbered on 2026-08-10 when the owner
 judged that building it on purely local state was the cart before the horse.
 The served-order record that 003 assumed it would have to invent is now this
-spec's plumbing (User Story 3, FR-011/FR-012).
+spec's plumbing (User Story 2, FR-013/FR-014).
 
 **Input**: User description: "I realized we've put the cart before the horse a
 bit the AI stuff in spec 2, make that spec 3. Instead of everything being
@@ -147,6 +147,14 @@ reading logs (FR-029).
   starts are mitigated by warming the service and database as soon as the app
   loads, seconds before any request is actually needed, rather than by paying
   for always-warm hosting. (Now FR-024, FR-030, SC-007.)
+- Q: Should every account get its own shuffled name order, or should all
+  accounts be dealt the same global sequence? → A: Option A — each account gets
+  its own deterministic shuffle, seeded from the account, shared by both
+  swipers on it. The fixed global seed `20260730` retires. (Now FR-014.)
+- Q: Should the API limit how many requests one account can make, and what
+  happens when it goes over? → A: Option B — a per-account request cap set far
+  above realistic human use; over-limit requests are refused and surface as the
+  app's friendly waiting state. No per-IP limiting this release. (Now FR-032.)
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -329,6 +337,11 @@ repository at any point.
   without losing whatever was already typed, and an already-consumed or expired
   link produces a plain "this link has expired, request a new one" rather than
   an error state.
+- **Account hits the request cap**: swiping continues through everything
+  already in the loaded block, since that needs no network. If the block empties
+  while capped, the user sees the same "more names shortly" waiting state as
+  when offline, and normal service resumes when the window rolls over. No pick
+  is lost and nothing is presented as an error.
 - **Free-tier database suspended after prolonged inactivity**: a warm-up ping
   keeps the project active only while somebody opens the app; a stretch with no
   users at all can still put the database to sleep in a way that a ping does
@@ -408,9 +421,14 @@ repository at any point.
 - **FR-013**: The service MUST record the order in which names are dealt to an
   account, shared by both swipers, so that both swipers see the same names in
   the same order — the record [003](../003-ai-name-filter/spec.md) builds on.
-- **FR-014**: Served names MUST honor the account's girl/boy/both filter and
-  preserve today's ordering character: familiar names first, with occasional
-  deeper draws, and identical ordering for both swipers on the account.
+- **FR-014**: Each account MUST get its own name order, derived
+  deterministically from a seed belonging to that account, so the same account
+  always reproduces the same sequence while different accounts get different
+  ones. The order MUST honor the account's girl/boy/both filter and preserve
+  today's ordering character — familiar names first, with occasional deeper
+  draws — and MUST be identical for both swipers on the account. The fixed
+  global seed the frontend uses today is retired: determinism now comes from
+  the account's own seed rather than from a constant shared by every user.
 - **FR-015**: The system MUST never serve a duplicate — no name appears twice
   in an account's served order, and no name is re-served to a swiper who
   already swiped it.
@@ -469,6 +487,17 @@ repository at any point.
   suspended, the app MUST show the same friendly waiting state it uses when
   offline and retry on its own, never a raw error.
 
+**Abuse protection**
+
+- **FR-032**: The service MUST cap how many requests a single account can make
+  in a given window. The cap MUST sit far enough above realistic human use that
+  a couple swiping continuously never reaches it, and MUST be low enough to
+  stop a runaway client from exhausting the free-tier allowance. Refused
+  requests MUST surface to the user as the friendly waiting state (FR-031),
+  never as an error, and MUST NOT cost the user any pick already recorded.
+  Per-IP limiting on sign-in and unauthenticated endpoints is out of scope for
+  this release.
+
 ### Key Entities
 
 - **Account**: a signed-in user, owning exactly one couple's state. Created via
@@ -524,6 +553,9 @@ repository at any point.
 - **SC-011**: A brand-new user gets from first launch to their first card in
   under 90 seconds including the email round-trip, and returning users reach
   the deck without any sign-in step at all.
+- **SC-012**: A simulated runaway client is refused once past the cap, while a
+  simulated session of continuous human swiping — an hour of uninterrupted
+  swiping at a realistic rate — never trips it.
 
 ## Assumptions
 
@@ -559,5 +591,9 @@ repository at any point.
   server, which the account now does properly. The tuned first-20 distribution
   from 001 (median near rank 180, roughly one card in six from deeper) is a
   property of the weighting, not of the seed, and survives the change.
+- **The exact rate-cap numbers are a planning decision.** The requirement fixes
+  the shape — per-account, generous, soft-failing — while the window and
+  threshold get set at plan time against measured block sizes and the free
+  tier's actual allowance.
 - **The name corpus content is unchanged** from 001. This spec moves it; it
   does not curate, extend, or re-derive it.

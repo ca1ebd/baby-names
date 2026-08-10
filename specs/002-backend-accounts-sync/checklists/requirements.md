@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain — 2 open (Q1, Q2)
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -43,12 +43,18 @@
    not "run `make check`." This item is marked `~` rather than failed because
    the leak is contained, labeled, and intentional.
 
-2. **Two open clarifications** (Q1: is an account required, or is there a guest
-   mode; Q2: monthly cost ceiling). Both were judged to lack a reasonable
-   default: Q1 changes the state model and the permanence of the import path,
-   and Q2 is required by Constitution II before any metered service is
-   introduced. Resolve via `/speckit-clarify` or answer inline before
-   `/speckit-plan`.
+2. **All clarifications resolved 2026-08-10** via `/speckit-clarify`, four
+   questions asked and answered:
+   - *Account required?* Yes — passwordless email magic link, no guest mode.
+     Guest mode lost on cost: a second state model plus a merge path, in the
+     exact area (sync) where this feature's risk already sits.
+   - *Cost ceiling?* $0, free tiers only, hard stop. Cold starts are handled by
+     warming the service and database on app load rather than by paying for
+     always-warm hosting.
+   - *Deck order?* Per-account deterministic shuffle; the global seed retires.
+     Reproducibility was the property worth keeping, not universality.
+   - *Rate limiting?* Per-account request cap, generous, soft-failing. Per-IP
+     limiting deferred.
 
 3. **Constitution III conflict — resolved 2026-08-10.** Hand-deploying the
    backend contradicts Pipeline-Only Deployments as written. The owner granted
@@ -63,18 +69,21 @@
    the data-migration user story and its requirement were removed outright
    rather than softened — no import path, no legacy save shapes, and the
    offline cache's value shape is free to change. `babyname-swipe-v3` still
-   MUST NOT be renamed. This removed the highest-risk slice of the feature and
-   dropped it from 6 user stories to 5, 30 FRs to 29, and 11 SCs to 10.
+   MUST NOT be renamed. This removed the highest-risk slice of the feature,
+   dropping it from 6 user stories to 5. (Clarification then grew the spec back
+   to 32 FRs and 12 SCs — warm-up, rate limiting, and per-account ordering.)
 
 5. **2026-08-10: Renumbering.** This spec took the 002 slot; the AI criteria
    filter moved to [003-ai-name-filter](../../003-ai-name-filter/spec.md).
    Cross-references in 001, 003, and `CLAUDE.md` were updated. 003's
    served-order requirements (its FR-004/FR-005) are now satisfied by this
-   spec's FR-012 and should be re-read as inherited rather than new when 003
-   reaches planning.
+   spec's FR-013/FR-014 and should be re-read as inherited rather than new when
+   003 reaches planning. Note that FR-014 now gives each account its own deck
+   order, which is what makes 003's "rebuild the deck beyond the furthest
+   swiper" possible without affecting other accounts.
 
 6. **Scope is a re-platforming, not a capability.** The bar for "done" is that
    a couple notices nothing except signing in. With the migration slice gone,
-   feature parity (FR-007) and sync correctness (FR-019, FR-022) now carry the
+   feature parity (FR-008) and sync correctness (FR-020, FR-023) now carry the
    risk; partner linking, CI/CD, and criteria filtering are explicitly
    deferred.
