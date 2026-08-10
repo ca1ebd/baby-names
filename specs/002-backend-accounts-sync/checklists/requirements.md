@@ -82,7 +82,26 @@
    order, which is what makes 003's "rebuild the deck beyond the furthest
    swiper" possible without affecting other accounts.
 
-6. **Scope is a re-platforming, not a capability.** The bar for "done" is that
+6. **2026-08-10: Planned.** `/speckit-plan` produced plan.md, research.md,
+   data-model.md, contracts/http-api.md, and quickstart.md. The Constitution
+   gate passed with one justified violation (Principle III, the granted
+   deviation, recorded in Complexity Tracking) and one **finding against the
+   constitution itself**: its "name pool invariants" constraint still requires
+   the no-D / no-"ey" letter rules that spec 001 retired, and the fixed-seed
+   global deck ordering that this spec's FR-014 retires. Two of that bullet's
+   four clauses are stale. Recommended as a separate PATCH-level
+   `/speckit-constitution` update, not folded into this feature's branch.
+
+7. **Research changed the plan in three places** — worth re-reading before
+   `/speckit-tasks`: the free database pauses after 7 days and is eventually
+   deleted (a keep-alive is mandatory, not an optimization); Supabase's
+   built-in email sender cannot deliver magic links to anyone outside the
+   project team, so a free-tier SMTP provider is a new hard dependency of
+   FR-002; and the frontend's deck algorithm has a float64 underflow that makes
+   ~71% of the core sort by strict rank, which the port must reproduce rather
+   than fix.
+
+8. **Scope is a re-platforming, not a capability.** The bar for "done" is that
    a couple notices nothing except signing in. With the migration slice gone,
    feature parity (FR-008) and sync correctness (FR-020, FR-023) now carry the
    risk; partner linking, CI/CD, and criteria filtering are explicitly
