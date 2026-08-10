@@ -218,6 +218,9 @@ correctly gendered, honoring the active filter.
    with roughly one card in six drawn from deeper.
 5. **Given** the same account swiping on two devices, **Then** both are served
    the same names in the same order.
+6. **Given** two different accounts with the same gender filter, **Then** their
+   decks are in visibly different orders, and each account's own order is
+   reproducible run after run.
 
 ---
 
@@ -478,7 +481,8 @@ repository at any point.
 - **Name**: an entry in the global list, with a gender and a popularity rank.
   Owned by the service; no longer shipped to the device.
 - **Served Order**: the record of names dealt to an account and each swiper's
-  position within it. Shared by both swipers. This is the plumbing
+  position within it, generated from the account's own seed. Shared by both
+  swipers. This is the plumbing
   [003](../003-ai-name-filter/spec.md) rebuilds from beyond the furthest
   swiper's position.
 - **Block**: a contiguous run of names handed to a device at once, sized to
@@ -500,7 +504,9 @@ repository at any point.
   a repeated name, without an empty-deck state, and without a visible pause at
   any block boundary.
 - **SC-004**: Both swipers on an account are served identical names in
-  identical order, verified across two devices.
+  identical order, verified across two devices; two different accounts are
+  served measurably different orders, and each account's order is reproducible
+  across repeated runs.
 - **SC-005**: Interrupting a sync at any point and retrying produces state
   identical to an uninterrupted sync, across at least 20 randomized
   interruption points.
@@ -547,5 +553,11 @@ repository at any point.
 - **The frontend stays where it is** — Azure Static Web Apps, deployed by the
   existing hand-written workflows. Only the backend is hand-deployed, and only
   until the next spec.
+- **Deck ordering stays deterministic, just not global.** The property worth
+  keeping from the seed-`20260730` design is reproducibility, not universality
+  — the global seed only ever existed to make two devices agree without a
+  server, which the account now does properly. The tuned first-20 distribution
+  from 001 (median near rank 180, roughly one card in six from deeper) is a
+  property of the weighting, not of the seed, and survives the change.
 - **The name corpus content is unchanged** from 001. This spec moves it; it
   does not curate, extend, or re-derive it.
