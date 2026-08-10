@@ -4,9 +4,8 @@
 
 **Created**: 2026-08-10
 
-**Status**: Draft — 1 open clarification (Q2, cost ceiling). Pre-release
-confirmed, Principle III deviation granted, and account model clarified
-2026-08-10.
+**Status**: Draft — no open clarifications. Pre-release confirmed, Principle
+III deviation granted, account model and cost posture clarified 2026-08-10.
 
 **Depends on**: [001-expanded-name-corpus](../001-expanded-name-corpus/spec.md)
 — the name corpus this feature moves off-device and serves from the backend.
@@ -94,7 +93,7 @@ directly implicated and one is load-bearing throughout:
 - **Principle II (Cost Consciousness)** — the constitution states that
   introducing any server-side component "is a constitutional cost question and
   requires explicit approval." This spec is that request. A monthly ceiling is
-  still unset ([NEEDS CLARIFICATION] Q2 below); FR-024 and SC-007 depend on it.
+  set at $0 (free tiers only) on 2026-08-10; see FR-024 and SC-007.
 - **Principle III (Pipeline-Only Deployments)** — as written, this principle
   prohibits manual deploys to production. Backend deploys in this release are
   manual. **Resolution: accepted as a time-boxed deviation, granted by the
@@ -143,6 +142,11 @@ reading logs (FR-029).
   account, or is signing in the first thing they do? → A: Option C — an
   account is required, created and entered by passwordless email magic link.
   No guest or anonymous mode. (Now FR-001/FR-002.)
+- Q: How much per month is the backend allowed to cost, and what happens if
+  usage pushes past it? → A: Option A — $0, free tiers only, hard stop. Cold
+  starts are mitigated by warming the service and database as soon as the app
+  loads, seconds before any request is actually needed, rather than by paying
+  for always-warm hosting. (Now FR-024, FR-030, SC-007.)
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -322,6 +326,12 @@ repository at any point.
   without losing whatever was already typed, and an already-consumed or expired
   link produces a plain "this link has expired, request a new one" rather than
   an error state.
+- **Free-tier database suspended after prolonged inactivity**: a warm-up ping
+  keeps the project active only while somebody opens the app; a stretch with no
+  users at all can still put the database to sleep in a way that a ping does
+  not wake on its own. The app treats this as the waiting state (FR-031), and
+  the plan phase must establish what the hosting tier actually does after
+  extended idleness and whether recovery needs a manual step.
 - **Session expires mid-swipe**: swiping continues through the loaded block.
   Re-authentication is requested at the next sync, and nothing swiped in the
   meantime is lost.
@@ -427,9 +437,10 @@ repository at any point.
 
 **Operations and development**
 
-- **FR-024**: Recurring cost MUST stay within the ceiling agreed at planning
-  time, with the cheapest viable hosting tier chosen and spend safeguards in
-  place ([NEEDS CLARIFICATION] Q2).
+- **FR-024**: Recurring cost MUST be $0. Only free hosting and database tiers
+  may be used, and no paid tier may be adopted without a new explicit grant
+  from the owner. Any configuration capable of incurring a charge MUST be
+  treated as a defect, and spend alerts MUST be in place to catch one.
 - **FR-025**: The repository MUST contain no credentials. Deployment
   credentials are supplied out-of-band, and a written runbook MUST make the
   manual deploy repeatable by someone who has not done it before.
@@ -442,6 +453,18 @@ repository at any point.
   before the implementation that satisfies it exists.
 - **FR-029**: The service MUST expose a health signal sufficient to tell
   "deployed and serving" from "deployed and broken" without reading logs.
+
+**Performance under free-tier hosting**
+
+- **FR-030**: The app MUST issue a warm-up request to the service as soon as it
+  loads — before sign-in, and before any request whose result the user is
+  waiting on — so that a scaled-to-zero service and a sleeping database wake
+  during sign-in rather than while the user stares at an empty deck. The
+  warm-up MUST be cheap, MUST touch the database rather than the service alone,
+  and MUST NOT block the UI or produce a visible error when it fails.
+- **FR-031**: When the service or database is waking, unreachable, or
+  suspended, the app MUST show the same friendly waiting state it uses when
+  offline and retry on its own, never a raw error.
 
 ### Key Entities
 
@@ -467,7 +490,9 @@ repository at any point.
 
 - **SC-001**: A user who signs in on a brand-new browser sees 100% of their
   picks, matches, profile names, last name, and gender filter restored, with
-  the first card on screen within 3 seconds on a normal connection.
+  the first card on screen within 3 seconds of completing sign-in on a normal
+  connection — including the case where the service and database were cold when
+  the app was opened, since the warm-up runs during sign-in.
 - **SC-002**: A swiper can complete a full block offline — every card, undo,
   and the Matches screen — with zero errors, and 100% of those picks reach the
   account within 10 seconds of connectivity returning.
@@ -481,8 +506,8 @@ repository at any point.
   interruption points.
 - **SC-006**: No account can read or modify another account's data — verified
   by test, not by inspection.
-- **SC-007**: Recurring monthly cost stays within the agreed ceiling, with a
-  measured figure recorded after the first full month.
+- **SC-007**: The recurring monthly bill is $0, confirmed against the actual
+  invoice after the first full month. Any nonzero charge is a defect.
 - **SC-008**: `make check` runs green on a clean clone with no manual setup, in
   under 5 minutes, and every behavior in this feature traces to a test that
   failed before its implementation existed.
@@ -514,26 +539,13 @@ repository at any point.
   riskiest part of the feature. The `babyname-swipe-v3` key itself still MUST
   NOT be renamed (Constitution IV), and the local-only mode disappears in
   favor of the account.
+- **Free-tier limits are accepted deliberately**, not overlooked. Scale-to-zero
+  cold starts and idle suspension are the price of a $0 bill, and the warm-up
+  path (FR-030) is the agreed mitigation rather than paid always-warm hosting.
+  If the mitigation proves insufficient in practice, the answer is a new
+  conversation about budget, not a quiet upgrade.
 - **The frontend stays where it is** — Azure Static Web Apps, deployed by the
   existing hand-written workflows. Only the backend is hand-deployed, and only
   until the next spec.
 - **The name corpus content is unchanged** from 001. This spec moves it; it
   does not curate, extend, or re-derive it.
-
-## Clarifications needed
-
-One decision remains open. It has no reasonable default and materially changes
-the work.
-
-### Q2: What is the monthly cost ceiling for the backend?
-
-**Context**: FR-024, SC-007. Constitution II requires that a metered feature
-carry an explicit, user-approved budget and safeguards against unbounded spend.
-This is the first server-side component in the project's history.
-
-| Option | Answer | Implications |
-|--------|--------|--------------|
-| A | $0 — free tiers only, hard stop | Constrains hosting to free allowances and accepts their limits, including cold starts and the possibility of a paused database on idle. Truest to the constitution as written. |
-| B | A small fixed ceiling (e.g. $10–25/month) | Buys an always-warm service and a database that will not pause, removing the worst of the free-tier user-visible symptoms. Requires spend alerts and a documented tripwire. |
-| C | Free tiers now, with a pre-agreed ceiling if usage forces an upgrade | Starts at zero and avoids deciding twice; the ceiling exists so an upgrade is not an emergency. Needs the trigger condition written down. |
-| Custom | Provide your own answer | State the ceiling and what should happen when it is approached. |
