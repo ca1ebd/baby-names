@@ -45,19 +45,30 @@ Resource names used throughout, all inside `baby-names-rg` / `eastus2`:
   Supabase silently fall back to `site_url` instead of erroring. The email
   still sends, the link still "works" in the sense that clicking it does hit
   Supabase's verify endpoint and issue a session — it just redirects the
-  browser to a `localhost:3000` that isn't running anything, so the client
-  never gets to consume the session token in the URL fragment. This is easy
-  to miss because nothing in the deploy path fails loudly; sign-in just
-  doesn't finish. Fix once per project:
+  browser somewhere other than where the client can consume the session
+  token in the URL fragment. This is easy to miss because nothing in the
+  deploy path fails loudly; sign-in just doesn't finish, or silently lands
+  on the wrong site (prod instead of staging, or vice versa). Fix once per
+  project:
   ```bash
   curl -X PATCH "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/config/auth" \
     -H "Authorization: Bearer ${SUPABASE_API_KEY}" \
     -H "Content-Type: application/json" \
     -d '{
       "site_url": "https://baby-names.calebdudley.dev",
-      "uri_allow_list": "https://baby-names.calebdudley.dev/**,https://baby-names.test.calebdudley.dev/**,http://localhost:5173/**"
+      "uri_allow_list": "https://baby-names.calebdudley.dev,https://baby-names.calebdudley.dev/**,https://baby-names.test.calebdudley.dev,https://baby-names.test.calebdudley.dev/**,http://localhost:5173,http://localhost:5173/**"
     }'
   ```
+  **List both the bare origin and the `/**` wildcard form of every site.**
+  `signInWithEmail` sends `emailRedirectTo: window.location.origin` — no
+  trailing slash, no path — and Supabase's allow-list glob matching does not
+  treat `https://example.com/**` as matching the bare origin with nothing
+  after it. Listing only the wildcard form still falls back to `site_url`
+  silently, same as an empty list, just less obviously (the email still
+  sends and the link still "half-works"). This bit the initial fix: staging
+  sign-ins landed on prod's app instead of staging's, because `site_url` was
+  prod and only the wildcard pattern was in the allow list.
+
   A magic link already clicked against the wrong redirect is spent — the
   server-side verification already happened even though the client couldn't
   complete it. Request a new one after fixing this, not a retry of the same
