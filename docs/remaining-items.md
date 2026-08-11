@@ -12,8 +12,9 @@ the hard way.
 ## 1. Replace the built-in auth email sender with real SMTP
 
 **Deferred from**: spec 002 (backend, accounts & sync)
+**Status**: decided (2026-08-11) — provider is **Resend**, not yet executed
 **Blocks**: anyone outside the project team using the app at all
-**Effort**: small — an afternoon, mostly account setup
+**Effort**: small — an afternoon, mostly account setup and DNS propagation time
 
 ### What we shipped instead
 
@@ -22,15 +23,16 @@ email service. That service has two limits that matter:
 
 - **It only delivers to addresses on the Supabase project's team.** An email to
   anyone else is refused outright. It is a testing facility, not a sender.
-- **2 emails per hour**, across all auth flows combined.
+- **2 emails per hour**, across all auth flows combined — identical on Supabase's
+  Free and Pro ($25/mo) plans; upgrading Supabase does not raise this. This was
+  hit for real during the deploy validation session (2026-08-11): a second
+  magic-link send within the hour came back `over_email_send_rate_limit`.
 
 ### What this means today
 
 The app is usable by the owner and by anyone explicitly added as a member of
 the Supabase project. Nobody else can sign in — not "sign-in is slow for them,"
-but *no magic link is ever delivered*. That is acceptable while the app is
-pre-release with two known users, and it is the reason this is deferred rather
-than a bug.
+but *no magic link is ever delivered*.
 
 Two practical consequences while this stands:
 
@@ -41,25 +43,59 @@ Two practical consequences while this stands:
   through real email at all — backend tests mint JWTs directly, and local work
   should use the Supabase CLI's local mail catcher.
 
+### The decision: Resend, over Brevo and Mailgun
+
+Compared on 2026-08-11 given the owner's stated plan to eventually distribute
+this app and sell a paid tier — cost of switching later turned out to be the
+wrong axis to optimize (the Supabase side of an SMTP swap is just host/port/
+user/pass in a dashboard, essentially free to redo), so the deciding factor
+was which provider needs revisiting the least as the app grows:
+
+| | Resend | Brevo | Mailgun |
+|---|---|---|---|
+| Free tier | 3,000/month | 300/day (~9,000/mo) | 100/day (~3,000/mo) |
+| Card required | No | No | No |
+| Built for | Transactional specifically | Full marketing suite | Transactional + parsing/routing |
+| Marketing email path later | **Built in** — Audiences + Broadcasts shipped 2024 (contacts, segments, campaign builder, open/click tracking) | Already there, but you're inside a marketing platform to send one magic link today | None — would need a second provider when marketing email happens |
+
+Resend's free tier is absurd overkill for two users' occasional sign-ins, but
+the deciding point was the Audiences/Broadcasts features: they mean Resend can
+plausibly carry both jobs — transactional auth email now, marketing campaigns
+later — under one account, rather than running two providers or migrating
+everything once marketing email becomes real. Brevo's free tier is
+technically the most generous, but it's marketing-platform weight for a
+one-email job today. Mailgun has no marketing story and free-tier terms that
+have shifted more than once historically.
+
 ### What the work is
 
-1. Sign up for a free-tier transactional email provider. Resend, Brevo, and
-   Mailgun all have free allowances orders of magnitude beyond what this app
-   needs. Any of them satisfies the $0 cap in spec 002's FR-024.
-2. Configure it as custom SMTP in the Supabase dashboard (Authentication →
-   Emails → SMTP Settings). Supabase's own auth rate limit then rises to ~30
-   new users/hour, which is irrelevant at this scale.
-3. Verify the sending domain (SPF/DKIM) or magic links land in spam, which
-   presents to a user as the same thing as not working.
-4. Update `api/DEPLOY.md` with the SMTP credentials step, and delete the
-   "authorized addresses only" caveat from spec 002's assumptions.
+1. **Owner signs up** for Resend (resend.com, free, no card) — not something to
+   automate on the owner's behalf, since it's tied to their identity/billing.
+2. **Add a sending subdomain**, not the bare domain — e.g. `mail.calebdudley.dev`
+   — so transactional mail reputation is cleanly scoped and can't affect the
+   main domain. Resend returns SPF/DKIM (and a recommended DMARC) records to add.
+3. **Add those DNS records** in `caleb-dudley-dev`'s Terraform (DNS for
+   `calebdudley.dev` is centrally managed there, per this repo's `CLAUDE.md`),
+   then `terraform apply` and wait for propagation/verification in Resend.
+4. **Generate SMTP credentials** in Resend (host/port/user/pass, not just an
+   API key — Supabase's custom SMTP wants SMTP, not Resend's HTTP API) and
+   configure them in Supabase (Authentication → Emails → SMTP Settings, or via
+   the Management API's `PATCH /config/auth`, same pattern already used for
+   the `site_url`/`uri_allow_list` fixes in `api/DEPLOY.md`).
+5. Store the SMTP credentials in `secrets/.env` (never committed) and document
+   the step in `api/DEPLOY.md`, next to the existing Supabase auth-config traps
+   it already records.
+6. Once live, delete the "authorized addresses only" caveat from spec 002's
+   assumptions — anyone can sign in at that point, not just the project team.
 
 ### Why it was deferred
 
-The app has no users beyond the owner. Standing up a fourth external service to
-serve two people whose addresses can simply be added to the project team is
-work with no payoff yet. It becomes mandatory the moment anyone else needs an
-account.
+The app had no users beyond the owner when spec 002 shipped. Standing up a
+fourth external service to serve two people whose addresses can simply be
+added to the project team was work with no payoff yet. It became a live
+problem the same day, once real end-to-end testing exercised the 2/hour cap —
+see `sessions/2026-08-11_0530_implement-and-deploy-backend-accounts-sync.md`
+and the same day's follow-up conversation for how it was found.
 
 ---
 
