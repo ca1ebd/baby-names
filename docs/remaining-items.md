@@ -199,11 +199,6 @@ Smaller items recorded elsewhere, collected here so there is one place to look.
 - **Account deletion and data export** — not specified in spec 002. Flagged as
   the one Outstanding category in that spec's clarification coverage. Low impact
   at two users; worth settling before any public launch.
-- **The constitution's name-pool invariants are stale** — `.specify/memory/
-  constitution.md` still requires the no-"D" / no-"ey" letter rules that spec
-  001 retired, and the global fixed-seed deck ordering that spec 002's FR-014
-  retires. Two of that bullet's four clauses no longer describe the project.
-  Wants a PATCH-level `/speckit-constitution` amendment.
 - **Backend CI/CD** — deliberately the next spec. Spec 002 deploys by hand
   under a time-boxed deviation from the constitution's pipeline-only principle,
   which expires when that spec ships.

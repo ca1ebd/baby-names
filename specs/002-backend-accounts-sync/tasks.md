@@ -215,11 +215,11 @@ Not available to the planning session, but present wherever `/speckit-implement`
 
 **Purpose**: Close out documentation and run the full validation pass now that every story is in place.
 
-- [ ] T090 [P] Update `CLAUDE.md`'s Stack & hosting and Data model sections to describe the backend, accounts, and localStorage's demotion to offline cache
-- [ ] T091 [P] Update `docs/remaining-items.md` if any deferred item's status changed during implementation
-- [ ] T092 Run every scenario in `quickstart.md`'s Validation scenarios end to end and record results, explicitly confirming **SC-002** (a full block swiped offline, every pick reaching the account within 10s of reconnect), **SC-011** (first launch to first card under 90s including the email round-trip; returning users reach the deck with no sign-in step), and **SC-012** (a simulated runaway client is refused past the cap while an hour of continuous human-rate swiping never trips it)
-- [ ] T093 Confirm SC-003 — an online session of 500+ names with no repeated name, no empty-deck state, and no visible pause at a block boundary
-- [ ] T096 [P] Amend the constitution's stale name-pool invariants via `/speckit-constitution` — a PATCH-level bump dropping the "no names starting with D / none ending in y, ie, ey" clauses retired by spec 001, and restating fixed-seed determinism as per-account rather than global per FR-014. plan.md's Constitution Check gate flagged this and recommended it as separate from this feature's branch; it is tracked here so it does not die at feature close. Keep the zero girl/boy overlap and deterministic-ordering clauses, which still hold
+- [X] T090 [P] Update `CLAUDE.md`'s Stack & hosting and Data model sections to describe the backend, accounts, and localStorage's demotion to offline cache
+- [X] T091 [P] Update `docs/remaining-items.md` if any deferred item's status changed during implementation
+- [X] T092 Run every scenario in `quickstart.md`'s Validation scenarios end to end and record results, explicitly confirming **SC-002** (a full block swiped offline, every pick reaching the account within 10s of reconnect), **SC-011** (first launch to first card under 90s including the email round-trip; returning users reach the deck with no sign-in step), and **SC-012** (a simulated runaway client is refused past the cap while an hour of continuous human-rate swiping never trips it)
+- [X] T093 Confirm SC-003 — an online session of 500+ names with no repeated name, no empty-deck state, and no visible pause at a block boundary
+- [X] T096 [P] Amend the constitution's stale name-pool invariants via `/speckit-constitution` — a PATCH-level bump dropping the "no names starting with D / none ending in y, ie, ey" clauses retired by spec 001, and restating fixed-seed determinism as per-account rather than global per FR-014. plan.md's Constitution Check gate flagged this and recommended it as separate from this feature's branch; it is tracked here so it does not die at feature close. Keep the zero girl/boy overlap and deterministic-ordering clauses, which still hold
 
 ---
 

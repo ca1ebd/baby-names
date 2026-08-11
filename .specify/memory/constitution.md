@@ -1,20 +1,26 @@
 <!--
 Sync Impact Report
 ==================
-Version change: (template, unversioned) → 1.0.0 → 1.1.0
+Version change: (template, unversioned) → 1.0.0 → 1.1.0 → 1.1.1
 Rationale: 1.0.0 initial ratification from owner-supplied principles.
            1.1.0 adds Principle V (No AI Vendor Attribution) — MINOR, a new
            principle with no change to existing ones.
+           1.1.1 amends the "Name pool invariants" bullet under Additional
+           Constraints — PATCH, a clarification/correction of stale wording,
+           not a principle addition or redefinition. Drops the letter-based
+           restrictions retired by spec 001 (no "D" starts, no "y"/"ie"/"ey"
+           endings — the curated pool they governed was replaced by the
+           generic SSA-derived corpus) and restates fixed-seed determinism as
+           per-account rather than global, per spec 002's FR-014 (each
+           account now gets its own deck_seed at creation). The zero-overlap
+           clause is unchanged in substance, only in how it's enforced (now a
+           database UNIQUE constraint). Flagged by plan.md's Constitution
+           Check gate during spec 002's planning and deliberately handled as
+           a separate amendment rather than inside that feature branch.
 
-Modified principles: n/a (initial adoption)
-Added sections:
-  - Core Principles (5 principles: Muted Visual Design; Cost Consciousness;
-    Pipeline-Only Deployments; Storage Key Stability; No AI Vendor Attribution)
-  - Additional Constraints
-  - Development Workflow
-  - Governance
-Removed sections:
-  - Fifth principle slot from template (user supplied four principles)
+Modified principles: n/a (Additional Constraints bullet, not a Core Principle)
+Added sections: n/a
+Removed sections: n/a
 
 Templates status:
   ✅ .specify/templates/plan-template.md — generic constitution-check gate, compatible
@@ -115,9 +121,16 @@ branches are a marketing artifact, and their removal is not negotiable.
   `overscroll-behavior: none`, safe-area insets, `minWidth: 0` on flex
   children, and `fontSize: 16` on inputs exist to fix real iOS Safari bugs and
   MUST be preserved in new layouts.
-- **Name pool invariants**: no names starting with "D", none ending in
-  "y"/"ie"/"ey", zero overlap between girl and boy pools, and deterministic
-  fixed-seed deck ordering across devices.
+- **Name pool invariants**: zero overlap between girl and boy pools (enforced
+  by a database `UNIQUE` constraint on `name` since spec 002 moved the corpus
+  server-side), and deterministic deck ordering per account across that
+  account's devices — spec 002's FR-014 gives each account its own seed at
+  creation rather than sharing one global seed, so determinism now holds
+  per-account, not globally. The letter-based restrictions this bullet used
+  to carry (no names starting with "D", none ending in "y"/"ie"/"ey") were
+  retired by spec 001, which replaced the curated pool with the generic
+  SSA-derived corpus; narrowing the deck is now the job of the AI criteria
+  filter (spec 003), not a build-time pool rule.
 
 ## Development Workflow
 
@@ -145,4 +158,4 @@ MINOR for adding or materially expanding one, PATCH for clarifications.
 Principles I–V; anything touching deploy workflows, storage schema, palette,
 or metered services gets called out explicitly in the PR description.
 
-**Version**: 1.1.0 | **Ratified**: 2026-08-08 | **Last Amended**: 2026-08-09
+**Version**: 1.1.1 | **Ratified**: 2026-08-08 | **Last Amended**: 2026-08-11
