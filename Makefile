@@ -10,11 +10,23 @@ api/.venv/.installed: api/pyproject.toml
 	@api/.venv/bin/pip install --quiet -e "./api[dev]"
 	@touch api/.venv/.installed
 
-# Run all backend checks (ruff + pyright + pytest with testcontainers)
+# Run all backend checks (ruff + pyright + pytest with testcontainers).
+# Runs all three even if an earlier one fails, so a broken type and a broken
+# test are both visible in one pass instead of the second being hidden until
+# the first is fixed and check is re-run (T078).
 check: api/.venv/.installed
-	@cd api && .venv/bin/ruff check src/ tests/
-	@cd api && .venv/bin/pyright src/
-	@cd api && .venv/bin/pytest
+	@cd api && \
+	.venv/bin/ruff check src/ tests/; RUFF=$$?; \
+	.venv/bin/pyright src/; PYRIGHT=$$?; \
+	.venv/bin/pytest; PYTEST=$$?; \
+	if [ $$RUFF -ne 0 ] || [ $$PYRIGHT -ne 0 ] || [ $$PYTEST -ne 0 ]; then \
+		echo ""; \
+		echo "make check FAILED:"; \
+		[ $$RUFF -ne 0 ] && echo "  - ruff (lint)"; \
+		[ $$PYRIGHT -ne 0 ] && echo "  - pyright (types)"; \
+		[ $$PYTEST -ne 0 ] && echo "  - pytest (tests)"; \
+		exit 1; \
+	fi
 
 # Run all frontend checks (oxlint + tsc + vite build)
 check-web:
