@@ -107,8 +107,8 @@ Not available to the planning session, but present wherever `/speckit-implement`
 - [X] T044 [US1] Wire the Welcome and Settings screens in `src/BabyNameSwipe.tsx` to persist via `PUT /v1/settings` on the existing ~400ms debounce
 - [X] T045 [US1] Wire "RESET EVERYTHING ON THIS DEVICE" and "START [NAME] OVER" to `POST /v1/reset`, updating the confirmation copy to say the reset clears both the account and the device (edge case)
 - [X] T046 [US1] On successful sign-in, call `GET /v1/state` and hydrate the `babyname-swipe-v3` cache per data-model.md's client cache shape
-- [ ] T047 [US1] Update `src/lib/storage.ts`'s cached-value handling for the new account/swipers/block/picks/outbox/`syncedAt` shape, keeping `STORAGE_KEY` unchanged (Constitution IV)
-- [ ] T048 [US1] On sign-out, attempt a flush once then clear the cached block/picks/account from the device (FR-006)
+- [X] T047 [US1] Update `src/lib/storage.ts`'s cached-value handling for the new account/swipers/block/picks/outbox/`syncedAt` shape, keeping `STORAGE_KEY` unchanged (Constitution IV)
+- [X] T048 [US1] On sign-out, attempt a flush once then clear the cached block/picks/account from the device (FR-006)
 
 **Checkpoint**: US1 is independently testable — sign in, restore state on a fresh session, sign out with nothing lost.
 
@@ -136,9 +136,9 @@ Not available to the planning session, but present wherever `/speckit-implement`
 - [X] T057 [US2] Create Pydantic schemas for the deck request/response in `api/src/babynames_api/schemas/deck.py`
 - [X] T058 [US2] Implement `POST /v1/deck/next` in `api/src/babynames_api/routers/deck.py`, wired into `main.py`
 - [X] T059 [US2] Extend `src/lib/api.ts` with `requestNextBlock(slot, count)`
-- [ ] T060 [US2] Replace the client-side pool/deal logic in `src/BabyNameSwipe.tsx` with backend-served blocks, keeping the card presentation, per-card gender color band, and "both" neutral tone unchanged
-- [ ] T061 [US2] Delete `src/lib/nameCorpus.ts` and its import from `src/BabyNameSwipe.tsx` (SC-010, ~217 KB gzip). **Blocked by T027 and T094** — this file is the seeder's input until T027 repoints it at `api/`'s own artifact, and the real database must already be seeded (T094). Deleting it early destroys the only path that loads the corpus into production
-- [ ] T062 [US2] Run `scripts/validate-corpus-ui.mjs` (or equivalent) to confirm deck presentation and bundle size are unaffected by the corpus removal
+- [X] T060 [US2] Replace the client-side pool/deal logic in `src/BabyNameSwipe.tsx` with backend-served blocks, keeping the card presentation, per-card gender color band, and "both" neutral tone unchanged
+- [X] T061 [US2] Delete `src/lib/nameCorpus.ts` and its import from `src/BabyNameSwipe.tsx` (SC-010, ~217 KB gzip). **Blocked by T027 and T094** — this file is the seeder's input until T027 repoints it at `api/`'s own artifact, and the real database must already be seeded (T094). Deleting it early destroys the only path that loads the corpus into production
+- [X] T062 [US2] Run `scripts/validate-corpus-ui.mjs` (or equivalent) to confirm deck presentation and bundle size are unaffected by the corpus removal
 
 **Checkpoint**: US1 + US2 together let a signed-in user swipe a real, correctly-ordered, correctly-gendered deck end to end.
 
@@ -161,11 +161,11 @@ Not available to the planning session, but present wherever `/speckit-implement`
 - [X] T066 [US3] Create Pydantic schemas for the picks batch request/response in `api/src/babynames_api/schemas/picks.py`
 - [X] T067 [US3] Implement `POST /v1/picks` — batched upsert, recomputed swiper positions in the response, capped at 500 picks/request — in `api/src/babynames_api/routers/picks.py`, wired into `main.py`
 - [X] T068 [P] [US3] Create `src/lib/syncQueue.ts` — outbox append on every swipe, ordered flush, delete-only-acknowledged entries, safe retry
-- [ ] T069 [US3] Wire `src/BabyNameSwipe.tsx`'s swipe/undo actions to update the local block/picks cache and append to the outbox synchronously, before any network call
-- [ ] T070 [US3] Implement the single friendly waiting state (FR-031) in `src/BabyNameSwipe.tsx` for offline/waking/429/5xx, replacing any raw error UI
-- [ ] T071 [US3] Implement low-water-mark refill — call `requestNextBlock` at ~20 names remaining (FR-021) in `src/BabyNameSwipe.tsx`
-- [ ] T072 [US3] Wire `syncQueue` flush triggers — on reconnect, on next-block request, and on sign-out — in `src/lib/syncQueue.ts`
-- [ ] T073 [US3] Implement the corpus-exhausted message, distinct from the offline waiting state (FR-017/FR-022), in `src/BabyNameSwipe.tsx`
+- [X] T069 [US3] Wire `src/BabyNameSwipe.tsx`'s swipe/undo actions to update the local block/picks cache and append to the outbox synchronously, before any network call
+- [X] T070 [US3] Implement the single friendly waiting state (FR-031) in `src/BabyNameSwipe.tsx` for offline/waking/429/5xx, replacing any raw error UI
+- [X] T071 [US3] Implement low-water-mark refill — call `requestNextBlock` at ~20 names remaining (FR-021) in `src/BabyNameSwipe.tsx`
+- [X] T072 [US3] Wire `syncQueue` flush triggers — on reconnect, on next-block request, and on sign-out — in `src/lib/syncQueue.ts`
+- [X] T073 [US3] Implement the corpus-exhausted message, distinct from the offline waiting state (FR-017/FR-022), in `src/BabyNameSwipe.tsx`
 
 **Checkpoint**: US1 + US2 + US3 complete the P1 slice — full offline-capable swiping with sync. This is the MVP.
 

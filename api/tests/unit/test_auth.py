@@ -5,7 +5,7 @@ import jwt
 import pytest
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 
 from babynames_api.auth import verify_token
 
@@ -99,6 +99,49 @@ async def test_malformed_token_rejected():
         await verify_token("not.a.valid.token")
 
     assert exc_info.value.status_code == 401
+
+
+@pytest.fixture
+def mock_jwks_es256(monkeypatch):
+    """Mock JWKS endpoint with an ES256 (elliptic curve) key, matching what
+    Supabase projects created after its 2025 key rotation actually issue —
+    RS256 alone (mock_jwks above) let a hardcoded `algorithms=["RS256"]` in
+    verify_token pass every test while rejecting every real Supabase token."""
+    from jwt.algorithms import ECAlgorithm
+
+    private_key = ec.generate_private_key(ec.SECP256R1(), backend=default_backend())
+    public_key = private_key.public_key()
+
+    jwk_dict = ECAlgorithm.to_jwk(public_key, as_dict=True)
+    jwk_dict["kid"] = "test-es256-kid"
+    jwk_dict["alg"] = "ES256"
+
+    jwks = {"test-es256-kid": jwk_dict}
+
+    async def mock_get_jwks():
+        return jwks
+
+    import babynames_api.auth
+    monkeypatch.setattr(babynames_api.auth, "get_jwks", mock_get_jwks)
+
+    return private_key
+
+
+@pytest.mark.asyncio
+async def test_valid_es256_token_returns_sub(mock_jwks_es256):
+    """A JWT signed with an ES256 key (what real Supabase projects issue) must
+    verify — algorithms=["RS256"] hardcoded in verify_token would reject it."""
+    sub = str(uuid.uuid4())
+    now = datetime.datetime.now(tz=datetime.UTC)
+    payload = {"sub": sub, "iat": now, "exp": now + datetime.timedelta(hours=1)}
+
+    token = jwt.encode(
+        payload, mock_jwks_es256, algorithm="ES256", headers={"kid": "test-es256-kid"}
+    )
+
+    result = await verify_token(token)
+
+    assert result == sub
 
 
 @pytest.mark.asyncio

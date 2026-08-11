@@ -8,7 +8,7 @@
  * - Flush happens on: reconnect, next-block request, sign-out.
  */
 
-import { postPicks, PickItem } from './api';
+import { postPicks, RateLimitedError } from './api';
 
 const STORAGE_KEY = 'babyname-swipe-v3';
 
@@ -84,9 +84,9 @@ export async function flushOutbox(): Promise<{ success: boolean; retryAfter?: nu
 
       return { success: true };
     } catch (error) {
-      if (error instanceof Error && error.message === 'rate_limited') {
+      if (error instanceof RateLimitedError) {
         // Return retryAfter hint (client will show waiting state)
-        return { success: false, retryAfter: 3600 };  // 1 hour in seconds
+        return { success: false, retryAfter: error.retryAfter };
       }
       // Other errors — keep outbox intact, will retry later
       return { success: false };

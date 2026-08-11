@@ -70,8 +70,31 @@ az acr build --registry babynamesacr --image baby-names-api:latest ./api
 ```
 
 `az acr build` builds `api/Dockerfile` in the cloud (no local Docker needed)
-and pushes straight to the registry. Re-run this on every deploy with a new
-tag (or `:latest` plus the digest that `containerapp update` picks up).
+and pushes straight to the registry.
+
+**Redeploying after a code change does not "just work" from `:latest` alone.**
+A Container App revision pins to the image *digest* it resolved at the moment
+the revision was created — pushing a new image under the same `:latest` tag
+and re-running `containerapp update --image ...:latest` is a no-op, because
+the image reference string in the ARM template hasn't changed and Container
+Apps only creates a new revision when it has. The old digest keeps serving
+traffic, including after a scale-to-zero cold start. This bit the very first
+deploy: an auth fix was pushed to `:latest`, `containerapp update` reported
+success, and the service kept 401ing on every real Supabase token because it
+was still running the pre-fix digest. Always redeploy by resolving the digest
+explicitly and forcing a new revision:
+
+```bash
+DIGEST=$(az acr repository show --name babynamesacr --image baby-names-api:latest --query "digest" -o tsv)
+az containerapp update --name baby-names-api --resource-group baby-names-rg \
+  --image "babynamesacr.azurecr.io/baby-names-api@${DIGEST}" \
+  --revision-suffix "deploy$(date +%s)"
+az containerapp job update --name baby-names-keepalive --resource-group baby-names-rg \
+  --image "babynamesacr.azurecr.io/baby-names-api@${DIGEST}"
+```
+
+Confirm the new revision is the one actually taking traffic:
+`az containerapp revision list --name baby-names-api --resource-group baby-names-rg -o table`.
 
 ## 3. Apply migrations
 
@@ -127,14 +150,34 @@ az containerapp create \
   --secrets \
       database-url="$DATABASE_URL" \
       supabase-project-ref="$SUPABASE_PROJECT_REF" \
+      supabase-url="$SUPABASE_URL" \
       cors-origins="$CORS_ORIGINS" \
       rate-limit-per-hour="$RATE_LIMIT_PER_HOUR" \
   --env-vars \
       DATABASE_URL=secretref:database-url \
       SUPABASE_PROJECT_REF=secretref:supabase-project-ref \
+      SUPABASE_URL=secretref:supabase-url \
       CORS_ORIGINS=secretref:cors-origins \
       RATE_LIMIT_PER_HOUR=secretref:rate-limit-per-hour
 ```
+
+`SUPABASE_URL` is easy to miss because `SUPABASE_PROJECT_REF` *looks* like it
+should be enough — it isn't. `auth.py`'s JWKS fetch builds its URL from
+`settings.supabase_url` directly, not by deriving it from the project ref, so
+leaving this one out doesn't fail to deploy or fail the health check; every
+authenticated endpoint 500s the moment a real request needs to verify a token
+(`httpcore.UnsupportedProtocol: Request URL is missing an 'http://' or
+'https://' protocol`, from a JWKS URL that's just `/auth/v1/.well-known/jwks.json`
+with an empty scheme+host). Confirm before moving on:
+
+```bash
+curl -s "https://$(az containerapp show --name baby-names-api --resource-group baby-names-rg --query "properties.configuration.ingress.fqdn" -o tsv)/v1/state" \
+  -H "Authorization: Bearer <any-real-supabase-jwt>"
+```
+
+A `401` means JWKS fetching works (the token was rejected on its own merits).
+A `500` mentioning `UnsupportedProtocol` means `SUPABASE_URL` didn't make it
+into the container's environment.
 
 Note the values are read from the current shell environment — `set -a && .
 secrets/.env && set +a` before running this, the same way the Makefile targets

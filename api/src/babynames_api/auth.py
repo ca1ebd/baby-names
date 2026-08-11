@@ -62,11 +62,18 @@ async def verify_token(token: str) -> str:
         # Convert JWK dict to PyJWK object for jwt.decode
         jwk_obj = PyJWK.from_dict(key)
 
-        # Verify token
+        # The signing algorithm comes from the JWK itself rather than being
+        # hardcoded: Supabase projects created after its 2025 key rotation
+        # sign with ES256 (elliptic curve), while the RS256 default only
+        # matches older projects or this test suite's own JWKS fixture. A
+        # hardcoded RS256 verifies fine against minted test tokens and rejects
+        # every real one — this exact mismatch shipped a backend where no
+        # authenticated endpoint ever worked, and only real end-to-end testing
+        # against a live Supabase project surfaced it.
         payload = jwt.decode(
             token,
             jwk_obj.key,
-            algorithms=["RS256"],
+            algorithms=[key.get("alg", "RS256")],
             audience=None,
             options={"verify_aud": False}
         )

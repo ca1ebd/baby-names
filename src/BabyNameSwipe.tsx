@@ -2,126 +2,34 @@
 // Ported as-is from the JS prototype; not worth retyping a component this dynamic.
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from "react";
 import { useUpdateCheck } from "./lib/useUpdateCheck";
-import { GIRL_CORPUS, BOY_CORPUS, GIRL_CORE_SIZE, BOY_CORE_SIZE } from "./lib/nameCorpus";
 import { signInWithEmail, signOut, onAuthStateChange, getSession } from "./lib/auth";
-import { warmupBackend, getState, putSettings, postReset } from "./lib/api";
+import { warmupBackend, getState, putSettings, postReset, requestNextBlock } from "./lib/api";
+import { flushOutbox } from "./lib/syncQueue";
 
 /* ---------------- data ---------------- */
 
-// Names come from src/lib/nameCorpus.ts, generated from public SSA data by
-// scripts/build-name-corpus.mjs. Both lists are ordered by popularity (index
-// is the rank) with the core names first, and share no spellings, so a pick
-// can never mean two names.
+// The name corpus and deck ordering now live on the backend (spec 002) — the
+// client no longer computes a pool or shuffles anything itself. What used to
+// be a locally-built deck is now `state.swipers[slot].block`: the run of
+// as-yet-undecided cards the service has dealt this swiper, fetched via
+// POST /v1/deck/next and topped up at a low-water mark (T071).
 
-// Deterministic PRNG — every ordering below is seeded, so both parents see the
-// same deck on any device. Never Math.random().
-function rng(seed) {
-  let s = seed;
-  return () => {
-    s = (s * 1664525 + 1013904223) % 4294967296;
-    return s / 4294967296;
-  };
-}
-
-function shuffled(list, seed = 20260730) {
-  const a = [...list];
-  const next = rng(seed);
-  for (let k = a.length - 1; k > 0; k--) {
-    const j = Math.floor(next() * (k + 1));
-    [a[k], a[j]] = [a[j], a[k]];
-  }
-  return a;
-}
-
-// The core is dealt in a popularity-weighted random order rather than strict
-// rank (which would read as a top-100 list) or a flat shuffle (which buries
-// Emma among thousands of rare spellings). Weighted sampling without
-// replacement: each name draws key = u^(rank+1) and the highest keys go first,
-// so a name's chance of surfacing early falls off with its rank while nothing
-// is excluded. Tuned against the real corpus: the median of the first 20 cards
-// lands near rank 180, with roughly one card in six from deeper in the list —
-// familiar names, with the occasional left-field one mixed in.
-function weightedShuffle(list, seed = 20260730) {
-  const next = rng(seed);
-  return list
-    .map((name, i) => ({ name, key: Math.pow(next(), i + 1) }))
-    .sort((a, b) => b.key - a.key)
-    .map((entry) => entry.name);
-}
-
-// A pool is the weighted-shuffled core followed by the shuffled long tail, so
-// the first several thousand cards are focused while the rest of the corpus
-// stays reachable behind them.
-function dealt(corpus, coreSize, seed) {
-  return [
-    ...weightedShuffle(corpus.slice(0, coreSize), seed),
-    ...shuffled(corpus.slice(coreSize), seed + 1),
-  ];
-}
-
-// Pools hold plain name strings, not objects — at this size, materializing
-// { n, g } for the whole pool costs startup time and memory for no benefit.
-// The card object is built only for the two or three visible cards.
-// Membership sets are built on first use rather than at module load — a fresh
-// girl/boy swiper never needs them, and paying for them would delay the first
-// card.
-let genderSets = null;
-
-function genderSetsOnce() {
-  if (!genderSets) {
-    genderSets = { girl: new Set(GIRL_CORPUS), boy: new Set(BOY_CORPUS) };
-  }
-  return genderSets;
-}
-
-// Returns undefined for a name that isn't in the corpus — which happens for
-// anything swiped before a corpus change. Those picks still count.
-function genderOf(name) {
-  const sets = genderSetsOnce();
-  if (sets.girl.has(name)) return "girl";
-  if (sets.boy.has(name)) return "boy";
-  return undefined;
-}
-
-// Whether a previously swiped name belongs in the list for the current filter.
-// A name the corpus no longer knows is always shown: it was really swiped, and
-// hiding it would silently drop a keep or a match.
-function inActiveView(name, genderFilter) {
-  if (genderFilter === "both") return true; // no lookup needed
-  const g = genderOf(name);
-  return !g || g === genderFilter;
-}
-
-// Built on first use and memoized: only the active filter's pool is ever
-// built, instead of all three at module load.
-const poolCache = {};
-
-function poolFor(genderFilter) {
-  const key = genderFilter === "boy" || genderFilter === "both" ? genderFilter : "girl";
-  if (!poolCache[key]) {
-    if (key === "boy") {
-      poolCache[key] = dealt(BOY_CORPUS, BOY_CORE_SIZE, 20260730);
-    } else if (key === "girl") {
-      poolCache[key] = dealt(GIRL_CORPUS, GIRL_CORE_SIZE, 20260730);
-    } else {
-      // "both" keeps the core-first property across the combined deck.
-      const core = [
-        ...GIRL_CORPUS.slice(0, GIRL_CORE_SIZE),
-        ...BOY_CORPUS.slice(0, BOY_CORE_SIZE),
-      ];
-      const tail = [
-        ...GIRL_CORPUS.slice(GIRL_CORE_SIZE),
-        ...BOY_CORPUS.slice(BOY_CORE_SIZE),
-      ];
-      poolCache[key] = [...weightedShuffle(core, 20260730), ...shuffled(tail, 20260731)];
-    }
-  }
-  return poolCache[key];
+// Whether a pick belongs in the list for the current filter. A pick whose
+// gender we don't know locally (e.g. restored from a backup, or hydrated from
+// GET /v1/state, which doesn't carry gender) is always shown — hiding it would
+// risk silently dropping a keep or a match, the exact bug spec 001 fixed.
+function inActiveView(gender, genderFilter) {
+  if (genderFilter === "both") return true;
+  if (!gender) return true;
+  return gender === genderFilter;
 }
 
 // DO NOT CHANGE THIS KEY. Changing it orphans every saved swipe.
 // Adding or removing names is safe — picks are keyed by name, not position.
 const STORAGE_KEY = "babyname-swipe-v3";
+
+const LOW_WATER_MARK = 20;
+const BLOCK_REQUEST_SIZE = 100;
 
 /* ---------------- tokens ---------------- */
 
@@ -245,6 +153,34 @@ function SegButton({ label, active, onClick }) {
   );
 }
 
+// Flattens the picks map into an outbox batch — used both for the one-time
+// legacy-shape migration below and for Restore, since neither case knows
+// which of these picks the server already has. Re-sending them all is
+// wasteful but harmless: POST /v1/picks upserts by decidedAt (FR-020).
+function picksToOutbox(picks) {
+  const outbox = [];
+  for (const name of Object.keys(picks)) {
+    for (const slotKey of Object.keys(picks[name])) {
+      const p = picks[name][slotKey];
+      outbox.push({ slot: Number(slotKey), name, verdict: p.verdict, decidedAt: p.decidedAt });
+    }
+  }
+  return outbox;
+}
+
+function emptyCacheShape() {
+  return {
+    account: { lastName: "", genderFilter: "girl", onboarded: false },
+    swipers: [
+      { slot: 0, label: "", position: 0, block: [], exhausted: false },
+      { slot: 1, label: "", position: 0, block: [], exhausted: false },
+    ],
+    picks: {},
+    outbox: [],
+    syncedAt: null,
+  };
+}
+
 function useStore() {
   const [state, setState] = useState(null);
   const [ready, setReady] = useState(false);
@@ -253,15 +189,7 @@ function useStore() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const fallback = {
-        people: [
-          { label: "", picks: {} },
-          { label: "", picks: {} },
-        ],
-        lastName: "",
-        genderFilter: "girl",
-        onboarded: false,
-      };
+      const fallback = emptyCacheShape();
       let loaded = fallback;
       let migrated = false;
       let ok = true;
@@ -269,15 +197,33 @@ function useStore() {
         const r = await window.storage.get(STORAGE_KEY, true);
         if (r) {
           const parsed = JSON.parse(r.value);
-          // Legacy saves (from before profiles/gender filter existed) have no
-          // `onboarded` field. Backfill it so existing instances keep working
-          // without being sent through the welcome dialog again.
-          if (parsed.onboarded === undefined) {
+          if (parsed.account === undefined && Array.isArray(parsed.people)) {
+            // Pre-backend shape (people[].picks). There is no account to
+            // reconcile — the app was localStorage-only before this feature —
+            // but any picks already made in this browser are worth keeping
+            // rather than discarding, so they carry into the outbox and sync
+            // once signed in.
+            const now = new Date().toISOString();
+            const picks = {};
+            parsed.people.forEach((person, slot) => {
+              Object.entries(person.picks || {}).forEach(([name, verdict]) => {
+                if (!picks[name]) picks[name] = {};
+                picks[name][slot] = { verdict, decidedAt: now };
+              });
+            });
             loaded = {
-              ...parsed,
-              lastName: parsed.lastName ?? "",
-              genderFilter: parsed.genderFilter ?? "girl",
-              onboarded: true,
+              account: {
+                lastName: parsed.lastName ?? "",
+                genderFilter: parsed.genderFilter ?? "girl",
+                onboarded: parsed.onboarded ?? false,
+              },
+              swipers: [
+                { slot: 0, label: parsed.people[0]?.label || "", position: 0, block: [], exhausted: false },
+                { slot: 1, label: parsed.people[1]?.label || "", position: 0, block: [], exhausted: false },
+              ],
+              picks,
+              outbox: picksToOutbox(picks),
+              syncedAt: null,
             };
             migrated = true;
           } else {
@@ -320,7 +266,19 @@ function useStore() {
     }
   }, []);
 
-  return { state, ready, persist, status };
+  // Re-reads the cache without writing it — for reconciling React state after
+  // something outside this hook (syncQueue's flushOutbox) wrote localStorage
+  // directly, e.g. on reconnect (T072).
+  const reload = useCallback(async () => {
+    try {
+      const r = await window.storage.get(STORAGE_KEY, true);
+      if (r) setState(JSON.parse(r.value));
+    } catch {
+      // nothing cached yet, or storage unavailable — leave state as-is
+    }
+  }, []);
+
+  return { state, ready, persist, reload, status };
 }
 
 /* ---------------- card ---------------- */
@@ -483,15 +441,19 @@ function Badge({ item, dx, fly, depth, lastName, genderFilter }) {
 /* ---------------- app ---------------- */
 
 export default function BabyNameSwipe() {
-  const { state, ready, persist, status } = useStore();
+  const { state, ready, persist, reload, status } = useStore();
   const updateAvailable = useUpdateCheck();
   const [who, setWho] = useState(0);
   const [view, setView] = useState("swipe");
   const [session, setSession] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
+  // True from the moment a session appears until GET /v1/state resolves (or
+  // fails). Without this, a returning user on a fresh device briefly (or, on
+  // a slow connection, not so briefly) sees the pre-hydration local fallback
+  // — onboarded: false — and flashes the Welcome screen before hydration
+  // overwrites it, even though their account is already onboarded (SC-011).
+  const [hydrating, setHydrating] = useState(false);
 
-  const [deck, setDeck] = useState([]);
-  const [i, setI] = useState(0);
   const [dx, setDx] = useState(0);
   const [fly, setFly] = useState(null);
   const [history, setHistory] = useState([]);
@@ -499,22 +461,16 @@ export default function BabyNameSwipe() {
 
   const dragRef = useRef({ active: false, startX: 0, id: null });
   const timerRef = useRef(null);
+  const fetchingRef = useRef({});
+  const hydratedRef = useRef(false);
 
-  const picks = state?.people?.[who]?.picks || {};
-
-  const pool = poolFor(state?.genderFilter);
-
-  // rebuild deck when the filter or the swiper changes
+  // Mirrors `state` so async work (block fetch, flush) can merge against the
+  // latest value instead of a stale closure, without introducing a lost-update
+  // race — read this ref, then persist synchronously, no await in between.
+  const stateRef = useRef(state);
   useEffect(() => {
-    if (!ready) return;
-    const p = state?.people?.[who]?.picks || {};
-    setDeck(pool.filter((n) => !p[n]));
-    setI(0);
-    setDx(0);
-    setFly(null);
-    setHistory([]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pool, who, ready]);
+    stateRef.current = state;
+  }, [state]);
 
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
@@ -527,7 +483,6 @@ export default function BabyNameSwipe() {
   useEffect(() => {
     let cancelled = false;
 
-    // Check for existing session
     getSession().then((existingSession) => {
       if (!cancelled) {
         setSession(existingSession);
@@ -535,7 +490,6 @@ export default function BabyNameSwipe() {
       }
     });
 
-    // Listen for auth state changes
     const unsubscribe = onAuthStateChange((newSession) => {
       if (!cancelled) {
         setSession(newSession);
@@ -548,44 +502,59 @@ export default function BabyNameSwipe() {
     };
   }, []);
 
-  // T046: On successful sign-in, call GET /v1/state and hydrate the cache
+  // T046: On sign-in, call GET /v1/state and hydrate the cache. Gated by
+  // hydratedRef rather than just [session] — Supabase refreshes the access
+  // token roughly hourly and fires the same auth-change event with a new
+  // session object, which would otherwise re-run this on every refresh and
+  // clobber any picks queued locally since the last hydration (T069's whole
+  // point is that those survive until flushed).
   useEffect(() => {
-    if (!session || !ready) return;
+    if (!session) {
+      hydratedRef.current = false;
+      return;
+    }
+    if (!ready || hydratedRef.current) return;
+    hydratedRef.current = true;
+    setHydrating(true);
 
     let cancelled = false;
-
     (async () => {
       try {
         const accountState = await getState();
         if (cancelled) return;
 
-        // Transform backend state to frontend cache shape
-        const hydratedState = {
-          people: [
-            {
-              label: accountState.swipers.find((s) => s.slot === 0)?.label || "Parent 1",
-              picks: {},
-            },
-            {
-              label: accountState.swipers.find((s) => s.slot === 1)?.label || "Partner",
-              picks: {},
-            },
-          ],
-          lastName: accountState.account.lastName || "",
-          genderFilter: accountState.account.genderFilter || "girl",
-          onboarded: accountState.account.onboarded || false,
+        const hydrated = {
+          account: {
+            lastName: accountState.account.lastName || "",
+            genderFilter: accountState.account.genderFilter || "girl",
+            onboarded: accountState.account.onboarded || false,
+          },
+          swipers: [0, 1].map((slot) => {
+            const s = accountState.swipers.find((sw) => sw.slot === slot);
+            return {
+              slot,
+              label: s?.label || (slot === 0 ? "Parent 1" : "Partner"),
+              position: s?.position || 0,
+              block: [],
+              exhausted: false,
+            };
+          }),
+          picks: {},
+          outbox: [],
+          syncedAt: new Date().toISOString(),
         };
 
-        // Convert picks array to picks object
         for (const pick of accountState.picks) {
-          if (pick.slot >= 0 && pick.slot <= 1) {
-            hydratedState.people[pick.slot].picks[pick.name] = pick.verdict;
-          }
+          if (pick.slot !== 0 && pick.slot !== 1) continue;
+          if (!hydrated.picks[pick.name]) hydrated.picks[pick.name] = {};
+          hydrated.picks[pick.name][pick.slot] = { verdict: pick.verdict, decidedAt: pick.decidedAt };
         }
 
-        persist(hydratedState);
+        persist(hydrated);
       } catch (err) {
         console.error("Failed to hydrate state from backend:", err);
+      } finally {
+        if (!cancelled) setHydrating(false);
       }
     })();
 
@@ -594,32 +563,147 @@ export default function BabyNameSwipe() {
     };
   }, [session, ready, persist]);
 
-  // Derived from picks rather than the pool: a name both parents kept must
-  // stay listed even if it is no longer in the corpus. Insertion order = the
-  // order it was swiped.
+  // Reset per-swiper transient UI when switching who's swiping.
+  useEffect(() => {
+    setDx(0);
+    setFly(null);
+    setHistory([]);
+  }, [who]);
+
+  // keyboard
+  const decideRef = useRef(null);
+  const undoRef = useRef(null);
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!state?.account?.onboarded || view !== "swipe") return;
+      if (e.key === "ArrowRight") decideRef.current?.("like");
+      else if (e.key === "ArrowLeft") decideRef.current?.("pass");
+      else if (e.key === "Backspace") {
+        e.preventDefault();
+        undoRef.current?.();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [view, state?.account?.onboarded]);
+
+  // T071: low-water-mark refill. Also what gets the very first cards after
+  // sign-in, since GET /v1/state carries no deck — every swiper starts with
+  // an empty block.
+  const retryTimerRef = useRef({});
+  useEffect(
+    () => () => {
+      Object.values(retryTimerRef.current).forEach((t) => clearTimeout(t));
+    },
+    []
+  );
+
+  const fetchMore = useCallback(
+    async (slot) => {
+      if (fetchingRef.current[slot]) return;
+      const current = stateRef.current;
+      if (!current || current.swipers[slot]?.exhausted) return;
+      fetchingRef.current[slot] = true;
+      clearTimeout(retryTimerRef.current[slot]);
+      try {
+        // T072: flush before requesting more, so a device that fell behind
+        // uploads its own decisions before asking for new ones.
+        await flushOutbox().catch(() => {});
+        const result = await requestNextBlock(slot, BLOCK_REQUEST_SIZE);
+        const base = stateRef.current;
+        if (!base) return;
+        const next = structuredClone(base);
+        const sw = next.swipers[slot];
+        const existing = new Set(sw.block.map((c) => c.name));
+        const fresh = result.block.filter((c) => !existing.has(c.name));
+        sw.block = [...sw.block, ...fresh];
+        sw.exhausted = result.exhausted;
+        await persist(next);
+      } catch (err) {
+        // Offline, waking, rate-limited, or a 5xx — all render as the same
+        // friendly waiting state (FR-031). None of those are surfaced as an
+        // error, but a one-shot fetch that fails would otherwise strand the
+        // swiper on that waiting state until some unrelated state change
+        // happens to re-run the low-water-mark effect — so retry on a short
+        // timer instead of relying on that. The 'online' handler already
+        // covers the case where the browser knows it dropped connectivity;
+        // this covers everything else (a cold-starting container, one flaky
+        // request) without waiting for a browser-level signal that may never
+        // fire.
+        console.error("Failed to fetch next block:", err);
+        retryTimerRef.current[slot] = setTimeout(() => fetchMore(slot), 4000);
+      } finally {
+        fetchingRef.current[slot] = false;
+      }
+    },
+    [persist]
+  );
+
+  useEffect(() => {
+    // Gated on !hydrating: GET /v1/state hydration unconditionally resets
+    // block to [] (the server doesn't carry a deck), and it can still be in
+    // flight here since this effect only requires `state` to exist, which the
+    // pre-hydration fallback already satisfies. Fetching a block before
+    // hydration lands means hydration's persist() — which always wins, since
+    // it's the source of truth for sign-in — clobbers the freshly-fetched
+    // cards the moment it resolves.
+    if (!session || !ready || !state || hydrating) return;
+    const sw = state.swipers[who];
+    if (!sw || sw.exhausted) return;
+    if (sw.block.length < LOW_WATER_MARK) {
+      fetchMore(who);
+    }
+  }, [session, ready, state, who, hydrating, fetchMore]);
+
+  // T072: flush on reconnect.
+  useEffect(() => {
+    const onOnline = () => {
+      flushOutbox()
+        .then(() => reload())
+        .catch(() => {});
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [reload]);
+
+  // Derived from picks rather than the block: a name both parents kept must
+  // stay listed even if it is no longer being dealt. Insertion order = the
+  // order names appear in the picks map.
   const matches = useMemo(() => {
     if (!state) return [];
-    const [a, b] = state.people;
-    return Object.keys(a.picks).filter(
-      (n) =>
-        a.picks[n] === "keep" &&
-        b.picks[n] === "keep" &&
-        inActiveView(n, state.genderFilter)
-    );
+    return Object.keys(state.picks).filter((n) => {
+      const p = state.picks[n];
+      const a = p[0];
+      const b = p[1];
+      if (a?.verdict !== "keep" || b?.verdict !== "keep") return false;
+      return inActiveView(a.gender ?? b.gender, state.account.genderFilter);
+    });
   }, [state]);
 
   const decide = useCallback(
     (dir) => {
-      if (fly || !state || i >= deck.length) return;
-      const name = deck[i];
-      const next = structuredClone(state);
-      next.people[who].picks[name] = dir === "like" ? "keep" : "no";
-      persist(next);
-      setHistory((h) => [...h, name]);
+      if (fly) return;
+      const current = stateRef.current;
+      if (!current) return;
+      const sw = current.swipers[who];
+      const item = sw?.block?.[0];
+      if (!item) return;
 
-      const other = next.people[who === 0 ? 1 : 0];
-      if (dir === "like" && other.picks[name] === "keep") {
-        setToast(name);
+      const verdict = dir === "like" ? "keep" : "no";
+      const decidedAt = new Date().toISOString();
+
+      const next = structuredClone(current);
+      next.swipers[who].block = next.swipers[who].block.slice(1);
+      if (!next.picks[item.name]) next.picks[item.name] = {};
+      next.picks[item.name][who] = { verdict, decidedAt, gender: item.gender };
+      next.outbox.push({ slot: who, name: item.name, verdict, decidedAt });
+      persist(next);
+
+      setHistory((h) => [...h, { name: item.name, gender: item.gender, position: item.position }]);
+
+      const otherSlot = who === 0 ? 1 : 0;
+      if (dir === "like" && next.picks[item.name][otherSlot]?.verdict === "keep") {
+        setToast(item.name);
         setTimeout(() => setToast(null), 2200);
       }
 
@@ -627,37 +711,43 @@ export default function BabyNameSwipe() {
       timerRef.current = setTimeout(() => {
         setFly(null);
         setDx(0);
-        setI((v) => v + 1);
       }, 260);
     },
-    [deck, i, fly, persist, state, who]
+    [fly, persist, who]
   );
+  decideRef.current = decide;
 
   const undo = useCallback(() => {
-    if (!history.length || !state || fly) return;
+    if (!history.length || fly) return;
+    const current = stateRef.current;
+    if (!current) return;
     const last = history[history.length - 1];
-    const next = structuredClone(state);
-    delete next.people[who].picks[last];
+
+    const next = structuredClone(current);
+    const p = next.picks[last.name];
+    if (p) {
+      delete p[who];
+      if (Object.keys(p).length === 0) delete next.picks[last.name];
+    }
+    next.swipers[who].block = [
+      { position: last.position, name: last.name, gender: last.gender },
+      ...next.swipers[who].block,
+    ];
+    // Drop the most recent matching outbox entry, if it hasn't flushed yet —
+    // there is no "undo" verdict server-side, so an already-synced pick just
+    // stays until this name is decided again.
+    for (let idx = next.outbox.length - 1; idx >= 0; idx--) {
+      const entry = next.outbox[idx];
+      if (entry.slot === who && entry.name === last.name) {
+        next.outbox.splice(idx, 1);
+        break;
+      }
+    }
     persist(next);
     setHistory((h) => h.slice(0, -1));
-    setI((v) => Math.max(0, v - 1));
     setDx(0);
-  }, [history, persist, state, who, fly]);
-
-  // keyboard
-  useEffect(() => {
-    const onKey = (e) => {
-      if (!state?.onboarded || view !== "swipe") return;
-      if (e.key === "ArrowRight") decide("like");
-      else if (e.key === "ArrowLeft") decide("pass");
-      else if (e.key === "Backspace") {
-        e.preventDefault();
-        undo();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [decide, undo, view, state?.onboarded]);
+  }, [history, persist, who, fly]);
+  undoRef.current = undo;
 
   const onDown = (e) => {
     if (fly) return;
@@ -676,14 +766,21 @@ export default function BabyNameSwipe() {
     else setDx(0);
   };
 
-  const keeps = Object.keys(picks).filter(
-    (n) => picks[n] === "keep" && inActiveView(n, state?.genderFilter)
-  );
+  const activeSwiper = state?.swipers?.[who];
+  const genderFilter = state?.account?.genderFilter;
+  const block = activeSwiper?.block || [];
+  const exhausted = activeSwiper?.exhausted || false;
+
+  const keeps = state
+    ? Object.keys(state.picks).filter((n) => {
+        const p = state.picks[n][who];
+        return p?.verdict === "keep" && inActiveView(p.gender, genderFilter);
+      })
+    : [];
+
   // Card objects are built only for the handful of visible cards.
-  const visible = deck
-    .slice(i, i + 3)
-    .map((n) => ({ n, g: state?.genderFilter === "both" ? genderOf(n) : state?.genderFilter }));
-  const label = state?.people?.[who]?.label || "";
+  const visible = block.slice(0, 3).map((item) => ({ n: item.name, g: item.gender }));
+  const label = state?.swipers?.[who]?.label || "";
 
   const round = (bg, brd, size) => ({
     width: size,
@@ -698,6 +795,25 @@ export default function BabyNameSwipe() {
     fontFamily: ui,
     fontWeight: 800,
   });
+
+  const handleSignOut = useCallback(async () => {
+    // FR-006: attempt a flush once, then clear the cache regardless of
+    // whether it succeeded — a shared device must not show the next person
+    // anything left over.
+    try {
+      await flushOutbox();
+    } catch {
+      // best-effort — proceed to clear either way
+    }
+    try {
+      await signOut();
+    } catch {
+      // ignore — clearing local state below still protects the device
+    }
+    await persist(emptyCacheShape());
+    setView("swipe");
+    setWho(0);
+  }, [persist]);
 
   return (
     <div
@@ -730,74 +846,73 @@ export default function BabyNameSwipe() {
       `}</style>
 
       <div style={{ width: "100%", maxWidth: 380, height: "100%", display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, overflowX: "hidden" }}>
-        {authChecking || !ready || !state ? (
+        {authChecking || !ready || !state || hydrating ? (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "rgba(22,32,43,0.7)" }}>
             Loading…
           </div>
         ) : !session ? (
           <SignIn />
-        ) : !state.onboarded ? (
+        ) : !state.account.onboarded ? (
           <Welcome
             onSubmit={async (vals) => {
               const newState = {
-                people: [
-                  { label: vals.yourName || "Parent 1", picks: {} },
-                  { label: vals.partnerName || "Partner", picks: {} },
+                ...state,
+                account: { lastName: vals.lastName, genderFilter: vals.genderFilter, onboarded: true },
+                swipers: [
+                  { ...state.swipers[0], label: vals.yourName || "Parent 1" },
+                  { ...state.swipers[1], label: vals.partnerName || "Partner" },
                 ],
-                lastName: vals.lastName,
-                genderFilter: vals.genderFilter,
-                onboarded: true,
               };
               persist(newState);
 
               // T044: Wire Welcome to persist via PUT /v1/settings
-              if (session) {
-                try {
-                  await putSettings({
-                    lastName: vals.lastName || "",
-                    genderFilter: vals.genderFilter || "girl",
-                    onboarded: true,
-                    swiper0Label: vals.yourName || "Parent 1",
-                    swiper1Label: vals.partnerName || "Partner",
-                  });
-                } catch (err) {
-                  console.error("Failed to sync settings to backend:", err);
-                }
+              try {
+                await putSettings({
+                  lastName: vals.lastName || "",
+                  genderFilter: vals.genderFilter || "girl",
+                  onboarded: true,
+                  swiper0Label: vals.yourName || "Parent 1",
+                  swiper1Label: vals.partnerName || "Partner",
+                });
+              } catch (err) {
+                console.error("Failed to sync settings to backend:", err);
               }
             }}
           />
         ) : view === "settings" ? (
           <SettingsView
             initial={{
-              yourName: state.people?.[0]?.label || "",
-              partnerName: state.people?.[1]?.label || "",
-              lastName: state.lastName || "",
-              genderFilter: state.genderFilter || "girl",
+              yourName: state.swipers?.[0]?.label || "",
+              partnerName: state.swipers?.[1]?.label || "",
+              lastName: state.account.lastName || "",
+              genderFilter: state.account.genderFilter || "girl",
             }}
             onChange={async (vals) => {
-              const next = structuredClone(state);
-              next.people[0].label = vals.yourName || "Parent 1";
-              next.people[1].label = vals.partnerName || "Partner";
-              next.lastName = vals.lastName;
-              next.genderFilter = vals.genderFilter;
+              const current = stateRef.current;
+              const next = {
+                ...current,
+                account: { ...current.account, lastName: vals.lastName, genderFilter: vals.genderFilter },
+                swipers: [
+                  { ...current.swipers[0], label: vals.yourName || "Parent 1" },
+                  { ...current.swipers[1], label: vals.partnerName || "Partner" },
+                ],
+              };
               persist(next);
 
-              // T044: Wire Welcome and Settings to persist via PUT /v1/settings
-              if (session) {
-                try {
-                  await putSettings({
-                    lastName: vals.lastName || "",
-                    genderFilter: vals.genderFilter || "girl",
-                    onboarded: true,
-                    swiper0Label: vals.yourName || "Parent 1",
-                    swiper1Label: vals.partnerName || "Partner",
-                  });
-                } catch (err) {
-                  console.error("Failed to sync settings to backend:", err);
-                }
+              try {
+                await putSettings({
+                  lastName: vals.lastName || "",
+                  genderFilter: vals.genderFilter || "girl",
+                  onboarded: true,
+                  swiper0Label: vals.yourName || "Parent 1",
+                  swiper1Label: vals.partnerName || "Partner",
+                });
+              } catch (err) {
+                console.error("Failed to sync settings to backend:", err);
               }
             }}
             onBack={() => setView("swipe")}
+            onSignOut={handleSignOut}
             onResetEverything={async () => {
               if (
                 !window.confirm(
@@ -807,23 +922,13 @@ export default function BabyNameSwipe() {
                 return;
 
               // T045: Wire "RESET EVERYTHING ON THIS DEVICE" to POST /v1/reset
-              if (session) {
-                try {
-                  await postReset("everything");
-                } catch (err) {
-                  console.error("Failed to reset on backend:", err);
-                }
+              try {
+                await postReset("everything");
+              } catch (err) {
+                console.error("Failed to reset on backend:", err);
               }
 
-              persist({
-                people: [
-                  { label: "", picks: {} },
-                  { label: "", picks: {} },
-                ],
-                lastName: "",
-                genderFilter: "girl",
-                onboarded: false,
-              });
+              persist(emptyCacheShape());
               setView("swipe");
             }}
           />
@@ -859,7 +964,7 @@ export default function BabyNameSwipe() {
                   {[0, 1].map((k) => (
                     <SegButton
                       key={k}
-                      label={(state?.people?.[k]?.label || `P${k + 1}`).toUpperCase()}
+                      label={(state?.swipers?.[k]?.label || `P${k + 1}`).toUpperCase()}
                       active={who === k}
                       onClick={() => setWho(k)}
                     />
@@ -907,9 +1012,11 @@ export default function BabyNameSwipe() {
                   {visible.length === 0 ? (
                     <Empty
                       text={
-                        keeps.length
-                          ? `Deck's done. ${keeps.length} kept — check the list.`
-                          : "No names left in this filter. Try another one."
+                        exhausted
+                          ? keeps.length
+                            ? `Deck's done. ${keeps.length} kept — check the list, or try another filter.`
+                            : "No names left in this filter. Try another one."
+                          : "Finding more names… hang tight."
                       }
                     />
                   ) : (
@@ -921,8 +1028,8 @@ export default function BabyNameSwipe() {
                             dx={d === 0 ? dx : 0}
                             fly={d === 0 ? fly : null}
                             depth={d}
-                            lastName={state.lastName}
-                            genderFilter={state.genderFilter}
+                            lastName={state.account.lastName}
+                            genderFilter={genderFilter}
                           />
                         </div>
                       ))
@@ -958,10 +1065,27 @@ export default function BabyNameSwipe() {
                     if (!raw) return;
                     try {
                       const parsed = JSON.parse(raw);
-                      if (!Array.isArray(parsed?.people)) throw new Error("bad shape");
-                      persist(parsed);
-                      setDeck(pool.filter((n) => !parsed.people[who].picks[n]));
-                      setI(0);
+                      if (!Array.isArray(parsed?.swipers) || typeof parsed?.picks !== "object") {
+                        throw new Error("bad shape");
+                      }
+                      // Block positions may no longer align with this account's
+                      // served_order, so cards are always refetched fresh; every
+                      // pick is resent (the server upserts by decidedAt) since a
+                      // restore can't know what the server already has.
+                      const restored = {
+                        account: parsed.account,
+                        swipers: parsed.swipers.map((s, slot) => ({
+                          slot,
+                          label: s.label || "",
+                          position: s.position || 0,
+                          block: [],
+                          exhausted: false,
+                        })),
+                        picks: parsed.picks,
+                        outbox: picksToOutbox(parsed.picks),
+                        syncedAt: null,
+                      };
+                      persist(restored);
                       setHistory([]);
                     } catch {
                       window.alert("That didn't look like a backup from this app.");
@@ -971,19 +1095,23 @@ export default function BabyNameSwipe() {
                     if (!window.confirm(`Clear all of ${label}'s picks?`)) return;
 
                     // T045: Wire "START [NAME] OVER" to POST /v1/reset
-                    if (session) {
-                      try {
-                        await postReset("swiper", who);
-                      } catch (err) {
-                        console.error("Failed to reset swiper on backend:", err);
-                      }
+                    try {
+                      await postReset("swiper", who);
+                    } catch (err) {
+                      console.error("Failed to reset swiper on backend:", err);
                     }
 
-                    const next = structuredClone(state);
-                    next.people[who].picks = {};
+                    const current = stateRef.current;
+                    const next = structuredClone(current);
+                    for (const name of Object.keys(next.picks)) {
+                      delete next.picks[name][who];
+                      if (Object.keys(next.picks[name]).length === 0) delete next.picks[name];
+                    }
+                    next.outbox = next.outbox.filter((e) => e.slot !== who);
+                    next.swipers[who].block = [];
+                    next.swipers[who].position = 0;
+                    next.swipers[who].exhausted = false;
                     persist(next);
-                    setDeck(pool);
-                    setI(0);
                     setHistory([]);
                   }}
                 />
@@ -1415,7 +1543,7 @@ function Welcome({ onSubmit }) {
       <div>
         <div style={{ fontFamily: display, fontSize: 44, lineHeight: 1 }}>Welcome</div>
         <p style={{ fontSize: 13, opacity: 0.65, marginTop: 10, lineHeight: 1.6 }}>
-          Quick setup before you start swiping. This is saved on this device only.
+          Quick setup before you start swiping. This is saved to your account.
         </p>
       </div>
       <ProfileFields f={f} />
@@ -1424,7 +1552,7 @@ function Welcome({ onSubmit }) {
   );
 }
 
-function SettingsView({ initial, onChange, onBack, onResetEverything }) {
+function SettingsView({ initial, onChange, onBack, onResetEverything, onSignOut }) {
   const f = useProfileFields(initial);
 
   useEffect(() => {
@@ -1458,6 +1586,26 @@ function SettingsView({ initial, onChange, onBack, onResetEverything }) {
           }}
         >
           RESET EVERYTHING ON THIS DEVICE
+        </button>
+
+        <button
+          onClick={onSignOut}
+          style={{
+            marginTop: 10,
+            width: "100%",
+            padding: "11px",
+            borderRadius: 10,
+            border: `1px solid rgba(22,32,43,0.25)`,
+            background: "transparent",
+            color: "rgba(22,32,43,0.7)",
+            fontFamily: ui,
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: "0.18em",
+            cursor: "pointer",
+          }}
+        >
+          SIGN OUT
         </button>
 
         <div style={{ marginTop: 32 }}>

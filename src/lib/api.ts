@@ -181,6 +181,15 @@ export interface PicksResponse {
 /**
  * POST /v1/picks - Flush the offline outbox
  */
+export class RateLimitedError extends Error {
+  retryAfter: number;
+  constructor(retryAfter: number) {
+    super('rate_limited');
+    this.name = 'RateLimitedError';
+    this.retryAfter = retryAfter;
+  }
+}
+
 export async function postPicks(picks: PickItem[]): Promise<PicksResponse> {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/v1/picks`, {
@@ -191,8 +200,8 @@ export async function postPicks(picks: PickItem[]): Promise<PicksResponse> {
 
   if (!response.ok) {
     if (response.status === 429) {
-      const error = await response.json();
-      throw new Error('rate_limited');
+      const retryAfter = Number(response.headers.get('Retry-After')) || 3600;
+      throw new RateLimitedError(retryAfter);
     }
     throw new Error(`Failed to post picks: ${response.statusText}`);
   }
