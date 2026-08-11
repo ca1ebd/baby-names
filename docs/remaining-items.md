@@ -5,7 +5,7 @@ cold. This is not a wishlist — everything here is a decision already made to
 ship without something, recorded so it does not get forgotten or rediscovered
 the hard way.
 
-**Last updated**: 2026-08-10
+**Last updated**: 2026-08-11
 
 ---
 
@@ -140,6 +140,55 @@ If it is changed, note that it changes the deck for existing accounts from card
 ~2,100 onward. Since served order is frozen up to the furthest swiper's
 position (spec 002's FR-013), history is safe either way — only undealt names
 would reorder.
+
+---
+
+## 3. No frontend test framework — client-side FRs shipped without a failing-first test
+
+**Deferred from**: spec 002 (backend, accounts & sync)
+**Blocks**: nothing functionally. Weakens FR-028's test-first guarantee for
+everything in `src/`
+**Effort**: medium — picking and wiring a framework is the real cost, not the
+tests themselves
+
+### What we shipped instead
+
+Spec 002's FR-028 requires every behavioral change to originate as a test that
+fails before the implementation exists, and `make check` is the single gate
+that's supposed to prove it. That held throughout for the backend. It did not
+hold for the client: this repo has no frontend test framework at all (no
+Vitest, no Jest, no component-level Playwright) — `make check-web` is lint +
+`tsc` + a production build, none of which can fail on a behavioral regression.
+
+A full FR-to-test trace (T079) found every client-side requirement from spec
+002 shipped without a test that could have failed first: FR-006 (sign-out
+clears the cache), FR-018 (offline swipe/undo/Matches), FR-019/FR-021/FR-022
+(the outbox, low-water-mark refill, and offline-exhaustion messaging), plus
+the account/session requirements FR-001, FR-003, FR-008, FR-010, FR-011. The
+backend-side E2E validation done during that implementation session (real
+Supabase session, real deployed Container App, Playwright driving a built
+bundle) caught three real bugs none of `make check`'s tests could have — but
+that was a one-off manual pass, not something `make check` runs or can rerun.
+
+### Why it was not fixed
+
+Bootstrapping a frontend test framework mid-feature is a bigger call than one
+pass through an existing task list should make unilaterally — it's a standing
+decision about how this codebase tests itself going forward, not a bug fix.
+`src/BabyNameSwipe.tsx` also carries `// @ts-nocheck` on purpose (see
+`CLAUDE.md`) as a low-formality holdover from its prototype origins; adding
+real tests on top of it is worth doing deliberately, not as a 3am add-on.
+
+### What the work is
+
+1. Pick a framework — Vitest is the natural fit given Vite is already the
+   build tool; Playwright component/E2E tests are the natural fit for
+   anything that needs a real browser (drag gestures, `localStorage`).
+2. Wire it into `make check-web` so a broken client behavior actually fails
+   the gate, the same way pytest does for the backend.
+3. Write the tests FR-028 already required for FR-001/003/006/008/010/011/
+   018/019/021/022 — each is a specific, already-known behavior, not
+   exploratory work.
 
 ---
 
