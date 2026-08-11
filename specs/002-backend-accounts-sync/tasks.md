@@ -177,12 +177,12 @@ Not available to the planning session, but present wherever `/speckit-implement`
 
 **Independent Test**: On a clean clone with no database running, `make check` provisions its own throwaway Postgres, runs all three tools, and reports a single pass/fail. Deliberately break a type and a test, and confirm it fails for both reasons with actionable output.
 
-- [ ] T074 [US4] Finalize the `Makefile` `check` target to run ruff, `pyright --strict`, and pytest (via testcontainers) as one pass/fail command
-- [ ] T075 [US4] Add `make check-web` (oxlint + `tsc` + `vite build`) and confirm `make dev`, `make migrate`, `make seed-corpus` each work standalone
-- [ ] T076 [US4] Document the test-first loop (write a failing test → implement → `make check` → fix fallout → surface diff) in `api/README.md`
-- [ ] T077 [US4] Validate on a clean clone with no database running: `make check` provisions its own Postgres, runs all three tools, and reports one result in under 5 minutes (SC-008)
-- [ ] T078 [US4] Validate failure reporting: temporarily break a type and a test, confirm `make check` fails and names both reasons, then revert
-- [ ] T079 [US4] Trace every FR delivered by US1–US3 to the test that failed before its implementation existed (SC-008); note and close any gap
+- [X] T074 [US4] Finalize the `Makefile` `check` target to run ruff, `pyright --strict`, and pytest (via testcontainers) as one pass/fail command
+- [X] T075 [US4] Add `make check-web` (oxlint + `tsc` + `vite build`) and confirm `make dev`, `make migrate`, `make seed-corpus` each work standalone
+- [X] T076 [US4] Document the test-first loop (write a failing test → implement → `make check` → fix fallout → surface diff) in `api/README.md`
+- [X] T077 [US4] Validate on a clean clone with no database running: `make check` provisions its own Postgres, runs all three tools, and reports one result in under 5 minutes (SC-008)
+- [X] T078 [US4] Validate failure reporting: temporarily break a type and a test, confirm `make check` fails and names both reasons, then revert
+- [X] T079 [US4] Trace every FR delivered by US1–US3 to the test that failed before its implementation existed (SC-008); note and close any gap
 
 **Checkpoint**: The dev loop is trustworthy enough to be the only gate until CI/CD ships in the next spec.
 
