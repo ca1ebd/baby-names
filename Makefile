@@ -5,7 +5,7 @@
 # clone (quickstart.md: "no manual setup", FR-027/SC-008) rather than assuming
 # .venv already exists. Re-runs pip install whenever pyproject.toml changes.
 api/.venv/.installed: api/pyproject.toml
-	@python3 -m venv api/.venv
+	@python3.12 -m venv api/.venv
 	@api/.venv/bin/pip install --quiet --upgrade pip
 	@api/.venv/bin/pip install --quiet -e "./api[dev]"
 	@touch api/.venv/.installed
