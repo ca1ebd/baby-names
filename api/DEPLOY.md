@@ -38,6 +38,30 @@ Resource names used throughout, all inside `baby-names-rg` / `eastus2`:
   delivers to project-team addresses. This is what makes sign-in work at all
   for this release — do it before anyone tries to sign in, not after "it
   doesn't work" gets reported.
+- **The Supabase project's Site URL and redirect allow-list, or the magic
+  link goes nowhere.** A fresh Supabase project defaults `site_url` to
+  `http://localhost:3000` with an empty `uri_allow_list` — `signInWithOtp`'s
+  `emailRedirectTo` is validated against that list, and a mismatch makes
+  Supabase silently fall back to `site_url` instead of erroring. The email
+  still sends, the link still "works" in the sense that clicking it does hit
+  Supabase's verify endpoint and issue a session — it just redirects the
+  browser to a `localhost:3000` that isn't running anything, so the client
+  never gets to consume the session token in the URL fragment. This is easy
+  to miss because nothing in the deploy path fails loudly; sign-in just
+  doesn't finish. Fix once per project:
+  ```bash
+  curl -X PATCH "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/config/auth" \
+    -H "Authorization: Bearer ${SUPABASE_API_KEY}" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "site_url": "https://baby-names.calebdudley.dev",
+      "uri_allow_list": "https://baby-names.calebdudley.dev/**,https://baby-names.test.calebdudley.dev/**,http://localhost:5173/**"
+    }'
+  ```
+  A magic link already clicked against the wrong redirect is spent — the
+  server-side verification already happened even though the client couldn't
+  complete it. Request a new one after fixing this, not a retry of the same
+  link.
 
 ## 1. Provision the Container Apps environment
 
