@@ -11,28 +11,12 @@ from fastapi.testclient import TestClient
 
 
 def test_concurrent_deck_requests_no_duplicates(
-    client: TestClient, db_session, auth_for_account
+    client: TestClient, db_session, make_account
 ):
     """
     Concurrent calls to /v1/deck/next for the same account don't duplicate names.
     """
-    from babynames_api.models.account import Account
-    from babynames_api.models.swiper import Swiper
-
-    account = Account(
-        id="concurrent-account",
-        deck_seed=33333,
-        gender_filter="girl",
-        onboarded=True,
-    )
-    db_session.add(account)
-    db_session.commit()
-
-    swiper = Swiper(account_id=account.id, slot=0, label="Test", position=0)
-    db_session.add(swiper)
-    db_session.commit()
-
-    headers = auth_for_account(account.id)
+    _, headers = make_account(deck_seed=33333, gender_filter="girl")
 
     def request_block(count: int):
         """Make a single /v1/deck/next request."""
@@ -70,29 +54,12 @@ def test_concurrent_deck_requests_no_duplicates(
 
 
 def test_concurrent_requests_for_different_swipers(
-    client: TestClient, db_session, auth_for_account
+    client: TestClient, db_session, make_account
 ):
     """
     Concurrent requests for different swipers on the same account don't interfere.
     """
-    from babynames_api.models.account import Account
-    from babynames_api.models.swiper import Swiper
-
-    account = Account(
-        id="concurrent-swipers-account",
-        deck_seed=44444,
-        gender_filter="boy",
-        onboarded=True,
-    )
-    db_session.add(account)
-    db_session.commit()
-
-    swiper0 = Swiper(account_id=account.id, slot=0, label="Swiper 0", position=0)
-    swiper1 = Swiper(account_id=account.id, slot=1, label="Swiper 1", position=0)
-    db_session.add_all([swiper0, swiper1])
-    db_session.commit()
-
-    headers = auth_for_account(account.id)
+    _, headers = make_account(deck_seed=44444, gender_filter="boy")
 
     def request_for_slot(slot: int, count: int):
         """Request a block for a specific swiper slot."""

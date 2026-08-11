@@ -50,25 +50,11 @@ def test_deck_next_respects_gender_filter_girl(
         assert card["gender"] == "girl", f"Expected girl name, got {card}"
 
 
-def test_deck_next_respects_gender_filter_boy(
-    client: TestClient, db_session, auth_for_account
-):
+def test_deck_next_respects_gender_filter_boy(client: TestClient, make_account):
     """
     An account with genderFilter='boy' only receives boy names.
     """
-    from babynames_api.models.account import Account
-
-    # Create an account with boy filter
-    account = Account(
-        id="test-boy-account",
-        deck_seed=12345,
-        gender_filter="boy",
-        onboarded=True,
-    )
-    db_session.add(account)
-    db_session.commit()
-
-    headers = auth_for_account(account.id)
+    _, headers = make_account(deck_seed=12345, gender_filter="boy")
 
     response = client.post(
         "/v1/deck/next",

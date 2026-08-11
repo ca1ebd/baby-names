@@ -71,7 +71,7 @@ Not available to the planning session, but present wherever `/speckit-implement`
 - [X] T024 [P] Contract test: `GET /health` returns 200 `{"status":"ok","database":"ok",...}` when the database is reachable and 503 degraded when it is not, in `api/tests/contract/test_health.py`
 - [X] T025 Create `api/src/babynames_api/routers/health.py` — `GET /health`, unauthenticated, unversioned, issues `SELECT 1`
 - [X] T026 Create `api/src/babynames_api/main.py` — app factory, CORS from config, the `{"error":{"code","message"}}` error envelope, wires the health router
-- [X] T027 [P] Create `api/scripts/seed_corpus.py` and `api/src/babynames_api/corpus/names.json` (generated from the same source as `src/lib/nameCorpus.ts`) — idempotent load into `names`, wired to `make seed-corpus`, targeting the real project via `secrets/.env`'s `DATABASE_URL`
+- [X] T027 [P] Create `api/scripts/seed_corpus.py` and `api/src/babynames_api/corpus/names.json` (generated from the same source as `src/lib/nameCorpus.ts`) — idempotent load into `names`, wired to `make seed-corpus`, targeting the real project via `secrets/.env`'s `DATABASE_URL`. **Reopened 2026-08-11**: the script exists and works, but `names.json` was never generated — `seed_corpus.py` parses `src/lib/nameCorpus.ts` directly instead. That is the file T061 deletes, so the corpus must land in `api/` under its own generated artifact and the script must read *that*, or the seeding path is destroyed by its own feature. Finish the JSON half and repoint the script; do not leave the backend depending on a frontend file. **Closed 2026-08-11**: `scripts/build-name-corpus.mjs` now emits both artifacts from one curation pass (`--json-out`, defaulting to `api/src/babynames_api/corpus/names.json`); `names.json` is committed (63,880 names, 39,749 girl / 7,457 core, 24,131 boy / 5,707 core, matching the shipping client corpus exactly); `seed_corpus.py` reads only that artifact and no longer references `src/`. Verified against a throwaway Postgres: seeds 63,880 rows, a second run is a no-op, and a row that disagrees with the artifact is reported and exits non-zero rather than being silently rewritten (`picks`/`served_order` reference these ids)
 - [X] T028 Confirm `make check` runs green (ruff + `pyright --strict` + pytest against testcontainers Postgres) on the empty-but-wired scaffold before any user story work begins
 
 **Checkpoint**: Foundation ready — schema, auth, rate limiting, health, and the test harness all exist; user story implementation can now begin.
@@ -137,7 +137,7 @@ Not available to the planning session, but present wherever `/speckit-implement`
 - [X] T058 [US2] Implement `POST /v1/deck/next` in `api/src/babynames_api/routers/deck.py`, wired into `main.py`
 - [X] T059 [US2] Extend `src/lib/api.ts` with `requestNextBlock(slot, count)`
 - [ ] T060 [US2] Replace the client-side pool/deal logic in `src/BabyNameSwipe.tsx` with backend-served blocks, keeping the card presentation, per-card gender color band, and "both" neutral tone unchanged
-- [ ] T061 [US2] Delete `src/lib/nameCorpus.ts` and its import from `src/BabyNameSwipe.tsx` (SC-010, ~217 KB gzip)
+- [ ] T061 [US2] Delete `src/lib/nameCorpus.ts` and its import from `src/BabyNameSwipe.tsx` (SC-010, ~217 KB gzip). **Blocked by T027 and T094** — this file is the seeder's input until T027 repoints it at `api/`'s own artifact, and the real database must already be seeded (T094). Deleting it early destroys the only path that loads the corpus into production
 - [ ] T062 [US2] Run `scripts/validate-corpus-ui.mjs` (or equivalent) to confirm deck presentation and bundle size are unaffected by the corpus removal
 
 **Checkpoint**: US1 + US2 together let a signed-in user swipe a real, correctly-ordered, correctly-gendered deck end to end.
@@ -152,15 +152,15 @@ Not available to the planning session, but present wherever `/speckit-implement`
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T063 [P] [US3] Contract test: `POST /v1/picks` upserts on `(account_id, slot, name_id)`, keeping the later `decidedAt` on a repeated or overlapping batch, and accepts picks for names outside the swiper's current block, in `api/tests/contract/test_picks_post.py`
-- [ ] T064 [P] [US3] Integration test: interrupting and retrying a sync flush at 20 randomized points converges to the same state as one clean sync — no duplicated, dropped, or reordered picks (SC-005) in `api/tests/integration/test_sync_idempotency.py`
-- [ ] T065 [P] [US3] Integration test: a 429 from the rate cap never causes the client-visible pick count to drop (FR-032 client contract) in `api/tests/integration/test_picks_rate_limited.py`
+- [X] T063 [P] [US3] Contract test: `POST /v1/picks` upserts on `(account_id, slot, name_id)`, keeping the later `decidedAt` on a repeated or overlapping batch, and accepts picks for names outside the swiper's current block, in `api/tests/contract/test_picks_post.py`
+- [X] T064 [P] [US3] Integration test: interrupting and retrying a sync flush at 20 randomized points converges to the same state as one clean sync — no duplicated, dropped, or reordered picks (SC-005) in `api/tests/integration/test_sync_idempotency.py`
+- [X] T065 [P] [US3] Integration test: a 429 from the rate cap never causes the client-visible pick count to drop (FR-032 client contract) in `api/tests/integration/test_picks_rate_limited.py`
 
 ### Implementation for User Story 3
 
-- [ ] T066 [US3] Create Pydantic schemas for the picks batch request/response in `api/src/babynames_api/schemas/picks.py`
-- [ ] T067 [US3] Implement `POST /v1/picks` — batched upsert, recomputed swiper positions in the response, capped at 500 picks/request — in `api/src/babynames_api/routers/picks.py`, wired into `main.py`
-- [ ] T068 [P] [US3] Create `src/lib/syncQueue.ts` — outbox append on every swipe, ordered flush, delete-only-acknowledged entries, safe retry
+- [X] T066 [US3] Create Pydantic schemas for the picks batch request/response in `api/src/babynames_api/schemas/picks.py`
+- [X] T067 [US3] Implement `POST /v1/picks` — batched upsert, recomputed swiper positions in the response, capped at 500 picks/request — in `api/src/babynames_api/routers/picks.py`, wired into `main.py`
+- [X] T068 [P] [US3] Create `src/lib/syncQueue.ts` — outbox append on every swipe, ordered flush, delete-only-acknowledged entries, safe retry
 - [ ] T069 [US3] Wire `src/BabyNameSwipe.tsx`'s swipe/undo actions to update the local block/picks cache and append to the outbox synchronously, before any network call
 - [ ] T070 [US3] Implement the single friendly waiting state (FR-031) in `src/BabyNameSwipe.tsx` for offline/waking/429/5xx, replacing any raw error UI
 - [ ] T071 [US3] Implement low-water-mark refill — call `requestNextBlock` at ~20 names remaining (FR-021) in `src/BabyNameSwipe.tsx`
@@ -190,18 +190,20 @@ Not available to the planning session, but present wherever `/speckit-implement`
 
 ## Phase 7: User Story 5 - Hand-deploy the service (Priority: P3)
 
-**Goal**: A documented, repeatable manual deploy — container, migrations, keepalive job — with zero credentials in the repo, using the `az` CLI session and `baby-names-rg` resource group already available on the implementing machine (see "Credentials available on the implementing machine" above).
+**Goal**: A documented, repeatable manual deploy — container, migrations, corpus seed, keepalive job, and the frontend's build-time config — with zero credentials in the repo, using the `az` CLI session and `baby-names-rg` resource group already available on the implementing machine (see "Credentials available on the implementing machine" above).
 
 **Independent Test**: Follow the written deploy runbook from scratch on a clean environment and reach a working service, with no credential present in the repository at any point.
 
 - [ ] T080 [P] [US5] Create `api/src/babynames_api/keepalive.py` — entrypoint for the daily scheduled Container Apps job, issues a direct `SELECT 1` against the database via `db.py`, independent of the HTTP app
-- [ ] T081 [P] [US5] Write `api/DEPLOY.md` — the manual deploy runbook. State plainly that `az` is already authenticated on the deploying machine and `baby-names-rg` (East US 2) already exists alongside the frontend's SWA resources — no new subscription, login, or resource group is created — and that Supabase credentials come from `secrets/.env` rather than a freshly-created project; document each `az` command from T082–T087 in order, plus the periodic `pg_dump` backup step (research §2) and the step to add the partner's email to the Supabase project team
+- [ ] T081 [P] [US5] Write `api/DEPLOY.md` — the manual deploy runbook. State plainly that `az` is already authenticated on the deploying machine and `baby-names-rg` (East US 2) already exists alongside the frontend's SWA resources — no new subscription, login, or resource group is created — and that Supabase credentials come from `secrets/.env` rather than a freshly-created project; document each `az` command from T082–T087 in order — including T094's corpus seed (after migrations, before the frontend's copy is deleted) and T095's workflow/repository-secret setup as numbered steps — plus the periodic `pg_dump` backup step (research §2) and the step to add the partner's email to the Supabase project team
 - [ ] T082 [US5] Provision the Azure Container Apps Consumption environment (`minReplicas: 0`, Consumption workload profile) inside `baby-names-rg` via `az containerapp env create` (research §1's load-bearing config)
 - [ ] T083 [US5] Build and push the `api/Dockerfile` image to an Azure Container Registry in `baby-names-rg` via `az acr build`
 - [ ] T084 [US5] Apply Alembic migrations (`alembic upgrade head`) against the Supabase database using `secrets/.env`'s `DATABASE_URL`, recording the applied revision (FR-026)
+- [ ] T094 [US5] Seed the corpus into the real Supabase database — `make seed-corpus` against `secrets/.env`'s `DATABASE_URL`, immediately after T084's migrations — and verify the loaded row counts against the source (63,880 names; `GIRL_CORE_SIZE` 7,457, `BOY_CORE_SIZE` 5,707). The script is idempotent, so a re-run is safe. **Blocks T061** (FR-012)
 - [ ] T085 [US5] Deploy the Container App from the pushed image via `az containerapp create`, setting the Supabase/DB values from `secrets/.env` as Container App **secrets** (not plain env vars)
 - [ ] T086 [US5] Create the daily scheduled Container Apps Job running the `keepalive` entrypoint via `az containerapp job create`, in the same `baby-names-rg` (research §2)
 - [ ] T087 [US5] Configure an Azure spend/budget alert on `baby-names-rg` at any nonzero amount via `az consumption budget create` (FR-024)
+- [ ] T095 [US5] Wire the frontend's build-time config into both deploy workflows — `VITE_API_BASE_URL` (the Container App's URL from T085), `VITE_SUPABASE_URL`, and `VITE_SUPABASE_ANON_KEY`, sourced from GitHub repository secrets, added to the `env:` block of the `npm run build` step in **both** `.github/workflows/azure-static-web-apps.yml` and `azure-static-web-apps-staging.yml`, preserving the existing `VITE_COMMIT_SHA` stamping (Constitution III). Set the repository secrets from `secrets/.env` via the `gh` CLI; never commit the values (FR-025). Without this the deployed bundle silently falls back to an empty Supabase config and `http://localhost:8000`, so sign-in fails at runtime with a green build (quickstart.md Environment table, FR-002, FR-030)
 - [ ] T088 [US5] Follow `api/DEPLOY.md` end to end and confirm a reachable service, migrations applied in order, and zero credentials in the repository at any commit (SC-009)
 - [ ] T089 [US5] Confirm the daily keepalive job succeeds on its schedule, pings the database directly rather than through `/health`, and costs roughly 75 vCPU-seconds/month (quickstart.md scenario 12)
 
@@ -215,8 +217,9 @@ Not available to the planning session, but present wherever `/speckit-implement`
 
 - [ ] T090 [P] Update `CLAUDE.md`'s Stack & hosting and Data model sections to describe the backend, accounts, and localStorage's demotion to offline cache
 - [ ] T091 [P] Update `docs/remaining-items.md` if any deferred item's status changed during implementation
-- [ ] T092 Run every scenario in `quickstart.md`'s Validation scenarios end to end and record results
+- [ ] T092 Run every scenario in `quickstart.md`'s Validation scenarios end to end and record results, explicitly confirming **SC-002** (a full block swiped offline, every pick reaching the account within 10s of reconnect), **SC-011** (first launch to first card under 90s including the email round-trip; returning users reach the deck with no sign-in step), and **SC-012** (a simulated runaway client is refused past the cap while an hour of continuous human-rate swiping never trips it)
 - [ ] T093 Confirm SC-003 — an online session of 500+ names with no repeated name, no empty-deck state, and no visible pause at a block boundary
+- [ ] T096 [P] Amend the constitution's stale name-pool invariants via `/speckit-constitution` — a PATCH-level bump dropping the "no names starting with D / none ending in y, ie, ey" clauses retired by spec 001, and restating fixed-seed determinism as per-account rather than global per FR-014. plan.md's Constitution Check gate flagged this and recommended it as separate from this feature's branch; it is tracked here so it does not die at feature close. Keep the zero girl/boy overlap and deterministic-ordering clauses, which still hold
 
 ---
 
@@ -231,13 +234,36 @@ Not available to the planning session, but present wherever `/speckit-implement`
   - US4 (dev loop) and US5 (deploy) depend only on Foundational, not on US1–US3, and can start any time after Phase 2 — but validating them (T077–T079, T088–T089) is most meaningful once real endpoints exist to check against.
 - **Polish (Phase 8)**: Depends on all five user stories being complete.
 
+### Cross-phase blocking dependencies (added 2026-08-11)
+
+Two constraints cut across the phase order above. Both were found by
+`/speckit-analyze` after the backend went green; neither is visible from the
+phase sequence alone, and both fail late and quietly if ignored.
+
+1. **T061 is blocked by T027 and T094.** Deleting `src/lib/nameCorpus.ts` also
+   deletes the seeder's input: `api/scripts/seed_corpus.py` parses that
+   TypeScript file directly, because T027's `names.json` artifact was never
+   generated. Finish T027 (so the corpus lives in `api/` and the script reads
+   it there) and run T094 (so the real database is actually seeded) **before**
+   T061 removes the frontend copy. Deleting it first destroys the only path
+   that loads names into production, and the failure appears as an empty deck,
+   not as a build error.
+2. **US5's deploy (T082–T085, T095) should land before US2/US3's client
+   cutover (T060, T069–T073).** Every push to a non-`main` branch auto-deploys
+   staging. From T060 onward the client calls the service for its deck, so
+   until the Container App exists and T095 supplies `VITE_API_BASE_URL`,
+   every staging deploy serves an app that cannot load a single card. This is
+   a sequencing preference, not a correctness requirement — the alternative is
+   accepting a knowingly broken staging site for the duration of the client
+   work, which forfeits the pre-production review Constitution III relies on.
+
 ### User Story Dependencies
 
 - **US1 (P1)**: Depends only on Foundational. Delivers accounts + state restore.
 - **US2 (P1)**: Depends only on Foundational for its backend half (T049–T058). Its client half (T059–T062) touches `src/lib/api.ts`, created in US1 (T041) — sequence US1's client tasks before US2's client tasks if working solo; a second contributor can build the backend half of US2 fully in parallel with US1.
 - **US3 (P1)**: Same shape as US2 — backend half (T063–T067) only needs Foundational; client half (T068–T073) builds on `src/lib/api.ts` and the sign-in gate from US1, and on `requestNextBlock` from US2 (T071).
 - **US4 (P2)**: Depends only on Foundational's `make check` scaffolding (Phase 1–2). Most valuable once US1–US3 give it real behavior to gate.
-- **US5 (P3)**: Depends only on Foundational (`db.py`, `main.py`, migrations) plus the credentials noted at the top of this file. Independent of US1–US4's application logic; T082–T087's `az` provisioning can happen any time after Foundational, though T088's runbook validation is more meaningful once the app has real endpoints to smoke-test.
+- **US5 (P3)**: Depends only on Foundational (`db.py`, `main.py`, migrations) plus the credentials noted at the top of this file. Independent of US1–US4's application logic; T082–T087's `az` provisioning can happen any time after Foundational, though T088's runbook validation is more meaningful once the app has real endpoints to smoke-test. **Two of its tasks now gate work in earlier phases**: T094 (seed the real database) blocks T061, and T095 (frontend build config) is what makes the deployed client able to reach the service at all — see "Cross-phase blocking dependencies" above. T095 depends on T085, since it needs the deployed Container App's URL.
 
 ### Within Each User Story
 
@@ -279,9 +305,10 @@ Task: "Create src/lib/api.ts"
 
 1. Complete Phase 1: Setup.
 2. Complete Phase 2: Foundational (blocks everything).
-3. Complete Phase 3 (US1), Phase 4 (US2), Phase 5 (US3) — together these are the P1 slice and the actual MVP: a signed-in, offline-capable, synced swiping experience with server-owned names.
-4. **STOP and VALIDATE**: run quickstart.md scenarios 1, 3, 4, 5, 6, 7, 8 against the real stack.
-5. Hand-deploy (US5) to have something to validate against; layer in US4's dev-loop polish alongside.
+3. Complete the backend halves of Phase 3 (US1), Phase 4 (US2), and Phase 5 (US3) — done as of 2026-08-11, green under `make check`.
+4. **Deploy first (US5: T082–T085, T094, T095), then cut the client over.** This reverses the original step ordering, for the reason in "Cross-phase blocking dependencies" above: the client tasks are the point at which staging starts calling the service, and T094's seeding has to happen while `src/lib/nameCorpus.ts` still exists. Finish T027 before T094.
+5. Complete the client halves — T047/T048, T060–T062, T069–T073 — against the now-real service. Together with step 3 these are the P1 slice and the actual MVP: a signed-in, offline-capable, synced swiping experience with server-owned names.
+6. **STOP and VALIDATE**: run quickstart.md scenarios 1, 3, 4, 5, 6, 7, 8 against the real stack; layer in US4's dev-loop polish alongside.
 
 ### Incremental Delivery
 
@@ -299,7 +326,7 @@ With multiple contributors, after Foundational:
 
 - Contributor A: US1 (accounts/state, both backend and client).
 - Contributor B: US2's backend half (deck algorithm, endpoint), then US2's client half once US1's `src/lib/api.ts` lands.
-- Contributor C: US5 (deploy runbook, keepalive job, `az` provisioning) — fully independent of US1–US3.
+- Contributor C: US5 (deploy runbook, keepalive job, `az` provisioning) — independent of US1–US3's *application logic*, but not a free-running lane: T094 blocks US2's T061, and T095 depends on T085, so Contributor C's work has to land before the client cutover rather than beside it.
 - US3 and US4 pick up once US1's client scaffolding and US2's `requestNextBlock` exist.
 
 ---

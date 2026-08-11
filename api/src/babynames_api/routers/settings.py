@@ -11,7 +11,8 @@ from babynames_api.db import get_session
 from babynames_api.models.account import Account
 from babynames_api.models.swiper import Swiper
 from babynames_api.ratelimit import check_rate_limit
-from babynames_api.schemas.state import SettingsRequest
+from babynames_api.schemas.state import SettingsRequest, StateResponse
+from babynames_api.state import load_state
 
 router = APIRouter(prefix="/v1", tags=["settings"])
 
@@ -20,12 +21,16 @@ router = APIRouter(prefix="/v1", tags=["settings"])
 def update_settings(
     settings: SettingsRequest,
     account_id: Annotated[uuid.UUID, Depends(get_current_user)],
-    session: Annotated[Session, Depends(get_session)]
-) -> dict[str, str]:
-    """Update account settings and swiper labels"""
-    # Check rate limit
-    check_rate_limit(account_id, session)
+    session: Annotated[Session, Depends(get_session)],
+    _rate_limit: Annotated[None, Depends(check_rate_limit)],
+) -> StateResponse:
+    """
+    Update account settings and swiper labels.
 
+    Returns the updated account and swipers. Changing genderFilter deliberately
+    does not rewrite served_order: already-dealt names keep their positions and
+    the filter applies to names dealt from here on (contracts/http-api.md).
+    """
     # Update account
     account = session.get(Account, account_id)
     if not account:
@@ -50,4 +55,4 @@ def update_settings(
 
     session.commit()
 
-    return {"status": "ok"}
+    return load_state(session, account_id)

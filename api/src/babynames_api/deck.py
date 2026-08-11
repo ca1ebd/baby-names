@@ -5,14 +5,19 @@ Ports the frontend's weightedShuffle faithfully, including the float64 underflow
 that makes ~71% of the core sort by strict rank past position ~2,118.
 """
 
+import uuid
+from collections.abc import Callable
+
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from babynames_api.models.account import Account
 from babynames_api.models.name import Name
 from babynames_api.models.served_order import ServedOrder
 from babynames_api.models.swiper import Swiper
 
 
-def lcg(seed: int) -> callable:
+def lcg(seed: int) -> Callable[[], float]:
     """
     Linear congruential generator (LCG) - matches the frontend's rng(seed).
 
@@ -44,14 +49,14 @@ def weighted_shuffle(items: list[str], seed: int) -> list[str]:
     Returns:
         List of items in weighted-shuffled order
     """
-    rng = lcg(seed)
+    rng: Callable[[], float] = lcg(seed)
 
     # Assign keys: key = u^(rank+1) where u is random in [0,1)
-    keyed_items = []
+    keyed_items: list[tuple[float, int, str]] = []
     for rank, item in enumerate(items):
-        u = rng()
+        u: float = rng()
         # Float64 underflow: u^(rank+1) → 0.0 for large rank
-        key = u ** (rank + 1)
+        key: float = u ** (rank + 1)
         keyed_items.append((key, rank, item))
 
     # Sort by (key DESC, rank ASC) - stable sort preserves rank order for ties
@@ -63,19 +68,25 @@ def weighted_shuffle(items: list[str], seed: int) -> list[str]:
 
 def deal_block(
     db: Session,
-    account_id: str,
+    account_id: uuid.UUID,
     slot: int,
     count: int,
     gender_filter: str,
     deck_seed: int,
-) -> tuple[list[dict], bool]:
+) -> tuple[list[dict[str, str | int]], bool]:
     """
-    Deal the next block of names for a swiper.
+    Deal the next block of names for a swiper, and advance that swiper past it.
 
     Returns names from the swiper's current position onward. If the requested
     run extends past the end of served_order, deals more names first by running
     the account-seeded weighted shuffle, skipping already-served names, and
     appending to served_order.
+
+    Two calls racing on one account are serialized by a row lock on the account:
+    served_order positions are dense and per-account, so two callers that both
+    read "37 names served" would both try to write position 37. The lock is held
+    until the single commit at the end, which is also what stops two calls from
+    handing the same swiper the same block twice.
 
     Args:
         db: Database session
@@ -92,6 +103,10 @@ def deal_block(
     """
     # Clamp count to 1-200
     count = max(1, min(200, count))
+
+    # Serialize dealing for this account. Everything below runs inside one
+    # transaction, so the lock lives until the commit at the end.
+    db.execute(select(Account.id).where(Account.id == account_id).with_for_update())
 
     # Get the swiper's current position
     swiper = db.query(Swiper).filter(
@@ -149,9 +164,9 @@ def deal_block(
         already_served_ids = {row[0] for row in already_served}
 
         # Append to served_order, skipping already-served names
-        new_entries = []
+        new_entries: list[ServedOrder] = []
         for name in shuffled_names:
-            name_id, gender = name_to_id.get(name, (None, None))
+            name_id, _ = name_to_id.get(name, (None, None))
             if name_id and name_id not in already_served_ids:
                 entry = ServedOrder(
                     account_id=account_id,
@@ -166,7 +181,7 @@ def deal_block(
                     break
 
         db.bulk_save_objects(new_entries)
-        db.commit()
+        db.flush()
 
         served_count += len(new_entries)
 
@@ -192,6 +207,14 @@ def deal_block(
         for served, name in served_entries
     ]
 
+    # Advance the swiper past the cards just handed out. Without this the next
+    # call starts from the same position and deals the same block again, and the
+    # trailing swiper never catches up to the leading one.
+    if block:
+        swiper.position = int(block[-1]["position"]) + 1
+
+    db.commit()
+
     # Check if exhausted: block is shorter than requested
     exhausted = len(block) < count
 
@@ -209,7 +232,7 @@ def flat_shuffle(items: list[str], seed: int) -> list[str]:
     Returns:
         Shuffled list
     """
-    rng = lcg(seed)
+    rng: Callable[[], float] = lcg(seed)
     result = items.copy()
 
     for k in range(len(result) - 1, 0, -1):

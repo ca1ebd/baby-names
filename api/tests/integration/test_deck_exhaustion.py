@@ -8,32 +8,14 @@ with a short/empty block rather than repeating or silently emptying (FR-017).
 from fastapi.testclient import TestClient
 
 
-def test_deck_exhaustion_returns_true(
-    client: TestClient, db_session, auth_for_account
-):
+def test_deck_exhaustion_returns_true(client: TestClient, db_session, make_account):
     """
     Requesting past the corpus end sets exhausted: true.
     """
-    from babynames_api.models.account import Account
-    from babynames_api.models.swiper import Swiper
+    _, headers = make_account(deck_seed=12345, gender_filter="girl")
 
-    account = Account(
-        id="exhaustion-account",
-        deck_seed=12345,
-        gender_filter="girl",
-        onboarded=True,
-    )
-    db_session.add(account)
-    db_session.commit()
-
-    swiper = Swiper(account_id=account.id, slot=0, label="Test", position=0)
-    db_session.add(swiper)
-    db_session.commit()
-
-    headers = auth_for_account(account.id)
-
-    # The girl corpus has 39,749 names (from plan.md).
-    # Request in large chunks to reach the end quickly.
+    # The real girl corpus has 39,749 names (plan.md); the test corpus is much
+    # smaller. Request in large chunks to reach the end either way.
     total_received = 0
     exhausted = False
 
@@ -60,29 +42,11 @@ def test_deck_exhaustion_returns_true(
     assert total_received <= 39749, f"Received {total_received} names, expected ≤39,749"
 
 
-def test_exhausted_does_not_repeat_names(
-    client: TestClient, db_session, auth_for_account
-):
+def test_exhausted_does_not_repeat_names(client: TestClient, db_session, make_account):
     """
     After exhaustion, requesting more names does not repeat earlier names.
     """
-    from babynames_api.models.account import Account
-    from babynames_api.models.swiper import Swiper
-
-    account = Account(
-        id="no-repeat-account",
-        deck_seed=54321,
-        gender_filter="boy",
-        onboarded=True,
-    )
-    db_session.add(account)
-    db_session.commit()
-
-    swiper = Swiper(account_id=account.id, slot=0, label="Test", position=0)
-    db_session.add(swiper)
-    db_session.commit()
-
-    headers = auth_for_account(account.id)
+    _, headers = make_account(deck_seed=54321, gender_filter="boy")
 
     seen_names = set()
 

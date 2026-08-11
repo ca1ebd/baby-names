@@ -45,3 +45,5 @@ include = ["src"]
 strict = ["src"]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"

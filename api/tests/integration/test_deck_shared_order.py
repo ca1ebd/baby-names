@@ -8,31 +8,11 @@ are dealt the identical order (US2 scenario 5).
 from fastapi.testclient import TestClient
 
 
-def test_both_swipers_see_same_deck_order(
-    client: TestClient, db_session, auth_for_account
-):
+def test_both_swipers_see_same_deck_order(client: TestClient, db_session, make_account):
     """
     Both swipers on one account are dealt the identical order.
     """
-    from babynames_api.models.account import Account
-    from babynames_api.models.swiper import Swiper
-
-    # Create account with two swipers
-    account = Account(
-        id="shared-deck-account",
-        deck_seed=99999,
-        gender_filter="girl",
-        onboarded=True,
-    )
-    db_session.add(account)
-    db_session.commit()
-
-    swiper0 = Swiper(account_id=account.id, slot=0, label="Parent 1", position=0)
-    swiper1 = Swiper(account_id=account.id, slot=1, label="Parent 2", position=0)
-    db_session.add_all([swiper0, swiper1])
-    db_session.commit()
-
-    headers = auth_for_account(account.id)
+    _, headers = make_account(deck_seed=99999, gender_filter="girl")
 
     # Get first 30 cards for swiper 0
     response0 = client.post(
@@ -58,30 +38,13 @@ def test_both_swipers_see_same_deck_order(
     )
 
 
-def test_trailing_swiper_sees_same_cards(
-    client: TestClient, db_session, auth_for_account
-):
+def test_trailing_swiper_sees_same_cards(client: TestClient, db_session, make_account):
     """
     The trailing swiper sees the exact same cards the leading swiper saw.
     """
-    from babynames_api.models.account import Account
     from babynames_api.models.swiper import Swiper
 
-    account = Account(
-        id="trailing-swiper-account",
-        deck_seed=77777,
-        gender_filter="boy",
-        onboarded=True,
-    )
-    db_session.add(account)
-    db_session.commit()
-
-    swiper0 = Swiper(account_id=account.id, slot=0, label="Leader", position=0)
-    swiper1 = Swiper(account_id=account.id, slot=1, label="Trailer", position=0)
-    db_session.add_all([swiper0, swiper1])
-    db_session.commit()
-
-    headers = auth_for_account(account.id)
+    account, headers = make_account(deck_seed=77777, gender_filter="boy")
 
     # Swiper 0 gets first 100 cards
     response0_a = client.post(
@@ -93,6 +56,11 @@ def test_trailing_swiper_sees_same_cards(
     leader_first_100 = [card["name"] for card in response0_a.json()["block"]]
 
     # Update swiper 0's position
+    swiper0 = (
+        db_session.query(Swiper)
+        .filter(Swiper.account_id == account.id, Swiper.slot == 0)
+        .one()
+    )
     db_session.refresh(swiper0)
     assert swiper0.position == 100
 

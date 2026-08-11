@@ -73,6 +73,13 @@ def test_reset_everything_clears_all_data(client_with_db, db_session):
         response = client_with_db.post("/v1/reset", json={"scope": "everything"})
         assert response.status_code == 200
 
+        # The body is the post-reset state, same shape as GET /v1/state, so the
+        # client can rehydrate straight from it
+        body = response.json()
+        assert body["account"]["onboarded"] is False
+        assert body["picks"] == []
+        assert [s["position"] for s in body["swipers"]] == [0, 0]
+
         # Verify all cleared
         db_session.expire_all()
         updated_account = db_session.get(Account, account_id)

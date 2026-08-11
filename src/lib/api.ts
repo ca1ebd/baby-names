@@ -37,6 +37,7 @@ export interface AccountState {
     slot: number;
     name: string;
     verdict: string;
+    decidedAt: string;  // ISO 8601, millisecond precision — same form we send back
   }>;
 }
 
@@ -64,8 +65,10 @@ export async function getState(): Promise<AccountState> {
 
 /**
  * PUT /v1/settings - Update account settings
+ *
+ * Returns the updated state, same shape as GET /v1/state.
  */
-export async function putSettings(settings: SettingsData): Promise<void> {
+export async function putSettings(settings: SettingsData): Promise<AccountState> {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/v1/settings`, {
     method: 'PUT',
@@ -76,15 +79,20 @@ export async function putSettings(settings: SettingsData): Promise<void> {
   if (!response.ok) {
     throw new Error(`Failed to update settings: ${response.statusText}`);
   }
+
+  return response.json();
 }
 
 /**
  * POST /v1/reset - Reset account data
+ *
+ * Returns the post-reset state, in the same shape as GET /v1/state, so callers
+ * rehydrate the cache from the response instead of guessing what survived.
  */
 export async function postReset(
   scope: 'everything' | 'swiper',
   slot?: number
-): Promise<void> {
+): Promise<AccountState> {
   const headers = await getAuthHeaders();
   const body = scope === 'swiper' && slot !== undefined
     ? { scope, slot }
@@ -99,6 +107,8 @@ export async function postReset(
   if (!response.ok) {
     throw new Error(`Failed to reset: ${response.statusText}`);
   }
+
+  return response.json();
 }
 
 /**
@@ -139,6 +149,52 @@ export async function requestNextBlock(slot: number, count: number): Promise<Dec
 
   if (!response.ok) {
     throw new Error(`Failed to request next block: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Pick types for sync queue
+ */
+export interface PickItem {
+  slot: number;
+  name: string;
+  verdict: 'keep' | 'no';
+  decidedAt: string;  // ISO 8601
+}
+
+export interface PicksRequest {
+  picks: PickItem[];
+}
+
+export interface SwiperPosition {
+  slot: number;
+  position: number;
+}
+
+export interface PicksResponse {
+  accepted: number;
+  swipers: SwiperPosition[];
+}
+
+/**
+ * POST /v1/picks - Flush the offline outbox
+ */
+export async function postPicks(picks: PickItem[]): Promise<PicksResponse> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/v1/picks`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ picks }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 429) {
+      const error = await response.json();
+      throw new Error('rate_limited');
+    }
+    throw new Error(`Failed to post picks: ${response.statusText}`);
   }
 
   return response.json();

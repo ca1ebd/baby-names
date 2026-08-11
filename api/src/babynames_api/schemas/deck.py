@@ -10,7 +10,7 @@ class DeckNextRequest(BaseModel):
 
     slot: int = Field(..., ge=0, le=1, description="Swiper slot (0 or 1)")
     count: int = Field(
-        ..., ge=1, le=200, description="Number of names to request (clamped to 1-200)"
+        ..., description="Number of names to request (will be clamped to 1-200)"
     )
 
 

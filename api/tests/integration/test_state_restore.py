@@ -1,8 +1,10 @@
 """Test state restore on fresh session (SC-001)"""
+import datetime
 import uuid
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from babynames_api.auth import get_current_user
 from babynames_api.db import get_session
@@ -27,7 +29,9 @@ def client_with_db(db_session):
     app.dependency_overrides.clear()
 
 
-def test_fresh_session_restores_100_percent_of_state(client_with_db, db_session):
+def test_fresh_session_restores_100_percent_of_state(
+    client_with_db, db_session, corpus_names
+):
     """
     Signing in from fresh session should restore 100% of picks, matches,
     labels, last name, gender filter (SC-001)
@@ -59,14 +63,12 @@ def test_fresh_session_restores_100_percent_of_state(client_with_db, db_session)
     db_session.add(swiper0)
     db_session.add(swiper1)
 
-    # Create test names (testcontainers doesn't have corpus seeded)
-    test_names = ["Emma", "Olivia", "Sophia", "Liam", "Noah"]
-    names = []
-    for i, name_str in enumerate(test_names):
-        name = Name(name=name_str, gender="girl" if i < 3 else "boy", rank=i, is_core=True)
-        db_session.add(name)
-        names.append(name)
-    db_session.flush()
+    # Pick five names out of the seeded corpus. Picks reference names by id, so
+    # they have to be names the service already knows.
+    names = [
+        db_session.scalars(select(Name).where(Name.name == name_str)).one()
+        for name_str in corpus_names[:5]
+    ]
 
     # Add picks for both swipers
     picks_data = [
@@ -78,12 +80,14 @@ def test_fresh_session_restores_100_percent_of_state(client_with_db, db_session)
         (1, names[4].id, "keep"),
     ]
 
+    decided_at = datetime.datetime(2026, 8, 9, 18, 4, 11, tzinfo=datetime.UTC)
     for slot, name_id, verdict in picks_data:
         pick = Pick(
             account_id=account_id,
             slot=slot,
             name_id=name_id,
-            verdict=verdict
+            verdict=verdict,
+            decided_at=decided_at
         )
         db_session.add(pick)
 

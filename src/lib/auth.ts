@@ -1,4 +1,6 @@
-import { createClient, Session, User } from '@supabase/supabase-js';
+// Session and User are types only — a value import of them fails the build.
+import { createClient } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 
 // Get Supabase config from environment
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';

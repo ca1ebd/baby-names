@@ -3,7 +3,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 from sqlalchemy.orm import Session
 
 from babynames_api.auth import get_current_user
@@ -13,7 +13,8 @@ from babynames_api.models.pick import Pick
 from babynames_api.models.served_order import ServedOrder
 from babynames_api.models.swiper import Swiper
 from babynames_api.ratelimit import check_rate_limit
-from babynames_api.schemas.state import ResetRequest
+from babynames_api.schemas.state import ResetRequest, StateResponse
+from babynames_api.state import load_state
 
 router = APIRouter(prefix="/v1", tags=["reset"])
 
@@ -22,12 +23,15 @@ router = APIRouter(prefix="/v1", tags=["reset"])
 def reset_data(
     reset: ResetRequest,
     account_id: Annotated[uuid.UUID, Depends(get_current_user)],
-    session: Annotated[Session, Depends(get_session)]
-) -> dict[str, str]:
-    """Reset account data - everything or single swiper"""
-    # Check rate limit
-    check_rate_limit(account_id, session)
+    session: Annotated[Session, Depends(get_session)],
+    _rate_limit: Annotated[None, Depends(check_rate_limit)],
+) -> StateResponse:
+    """
+    Reset account data - everything or single swiper.
 
+    Returns the post-reset state, in the same shape as GET /v1/state, so the
+    client rehydrates from the response instead of guessing what survived.
+    """
     if reset.scope == "everything":
         # Clear all picks
         session.execute(delete(Pick).where(Pick.account_id == account_id))
@@ -37,7 +41,7 @@ def reset_data(
 
         # Reset all swiper positions
         session.execute(
-            Swiper.__table__.update()
+            update(Swiper)
             .where(Swiper.account_id == account_id)
             .values(position=0)
         )
@@ -48,7 +52,7 @@ def reset_data(
             account.onboarded = False
 
         session.commit()
-        return {"status": "ok"}
+        return load_state(session, account_id)
 
     if reset.scope == "swiper":
         if reset.slot is None:
@@ -67,12 +71,12 @@ def reset_data(
 
         # Reset position for this swiper
         session.execute(
-            Swiper.__table__.update()
+            update(Swiper)
             .where(Swiper.account_id == account_id, Swiper.slot == reset.slot)
             .values(position=0)
         )
 
         session.commit()
-        return {"status": "ok"}
+        return load_state(session, account_id)
 
     raise HTTPException(status_code=400, detail="scope must be 'everything' or 'swiper'")

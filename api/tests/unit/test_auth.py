@@ -22,19 +22,18 @@ def rsa_key_pair():
 
 @pytest.fixture
 def mock_jwks(monkeypatch, rsa_key_pair):
-    """Mock JWKS endpoint - return public key directly"""
-    from cryptography.hazmat.primitives import serialization
+    """Mock JWKS endpoint - return JWK dict format"""
+    from jwt.algorithms import RSAAlgorithm
 
     public_key = rsa_key_pair.public_key()
 
-    # Convert to PEM which jwt.decode accepts
-    public_pem = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    )
+    # Convert to JWK dict format
+    jwk_dict = RSAAlgorithm.to_jwk(public_key, as_dict=True)
+    jwk_dict["kid"] = "test-kid"
+    jwk_dict["alg"] = "RS256"
 
     jwks = {
-        "test-kid": public_pem
+        "test-kid": jwk_dict
     }
 
     async def mock_get_jwks():

@@ -1,12 +1,14 @@
 import random
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
 import httpx
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jwt import PyJWK
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from babynames_api.config import settings
@@ -16,10 +18,10 @@ from babynames_api.models.swiper import Swiper
 
 security = HTTPBearer(auto_error=False)
 
-_jwks_cache: dict[str, dict] | None = None
+_jwks_cache: dict[str, dict[str, Any]] | None = None
 
 
-async def get_jwks() -> dict[str, dict]:
+async def get_jwks() -> dict[str, dict[str, Any]]:
     global _jwks_cache
     if _jwks_cache is not None:
         return _jwks_cache
@@ -57,10 +59,13 @@ async def verify_token(token: str) -> str:
                 detail="Invalid token: unknown kid"
             )
 
+        # Convert JWK dict to PyJWK object for jwt.decode
+        jwk_obj = PyJWK.from_dict(key)
+
         # Verify token
         payload = jwt.decode(
             token,
-            key,
+            jwk_obj.key,
             algorithms=["RS256"],
             audience=None,
             options={"verify_aud": False}
@@ -106,26 +111,31 @@ async def get_current_user(
     account = session.scalar(stmt)
 
     if not account:
-        # Provision new account with two swipers and a deck seed
-        account = Account(
-            id=account_id,
-            deck_seed=random.randint(1, 2**31 - 1),
-            last_name="",
-            gender_filter="girl",
-            onboarded=False
-        )
-        session.add(account)
-
-        # Create two swipers
-        for slot in [0, 1]:
-            swiper = Swiper(
-                account_id=account_id,
-                slot=slot,
-                label="",
-                position=0
+        # Provision a new account with two swipers and a deck seed.
+        #
+        # DO NOTHING rather than a plain insert: a client that boots and fires
+        # its first few requests at once sends several unknown-sub requests
+        # before any of them has committed, and the loser of that race should
+        # join the account the winner created, not fail on a duplicate key.
+        session.execute(
+            pg_insert(Account)
+            .values(
+                id=account_id,
+                deck_seed=random.randint(1, 2**31 - 1),
+                last_name="",
+                gender_filter="girl",
+                onboarded=False,
             )
-            session.add(swiper)
-
+            .on_conflict_do_nothing(index_elements=[Account.id])
+        )
+        session.execute(
+            pg_insert(Swiper)
+            .values([
+                {"account_id": account_id, "slot": slot, "label": "", "position": 0}
+                for slot in (0, 1)
+            ])
+            .on_conflict_do_nothing(index_elements=[Swiper.account_id, Swiper.slot])
+        )
         session.commit()
 
     return account_id

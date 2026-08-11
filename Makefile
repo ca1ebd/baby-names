@@ -15,23 +15,23 @@ check-web:
 # Start the backend development server (loads secrets/.env if present)
 dev:
 	@if [ -f secrets/.env ]; then \
-		set -a && . secrets/.env && set +a && cd api && uvicorn babynames_api.main:app --reload; \
+		set -a && . secrets/.env && set +a && cd api && .venv/bin/uvicorn babynames_api.main:app --reload; \
 	else \
-		cd api && uvicorn babynames_api.main:app --reload; \
+		cd api && .venv/bin/uvicorn babynames_api.main:app --reload; \
 	fi
 
 # Run database migrations (loads secrets/.env if present)
 migrate:
 	@if [ -f secrets/.env ]; then \
-		set -a && . secrets/.env && set +a && cd api && alembic upgrade head; \
+		set -a && . secrets/.env && set +a && cd api && .venv/bin/alembic upgrade head; \
 	else \
-		cd api && alembic upgrade head; \
+		cd api && .venv/bin/alembic upgrade head; \
 	fi
 
 # Seed the name corpus into the database (loads secrets/.env if present)
 seed-corpus:
 	@if [ -f secrets/.env ]; then \
-		set -a && . secrets/.env && set +a && cd api && python scripts/seed_corpus.py; \
+		set -a && . secrets/.env && set +a && cd api && .venv/bin/python scripts/seed_corpus.py; \
 	else \
-		cd api && python scripts/seed_corpus.py; \
+		cd api && .venv/bin/python scripts/seed_corpus.py; \
 	fi
