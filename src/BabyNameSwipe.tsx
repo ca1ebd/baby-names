@@ -554,7 +554,21 @@ export default function BabyNameSwipe() {
       } catch (err) {
         console.error("Failed to hydrate state from backend:", err);
       } finally {
-        if (!cancelled) setHydrating(false);
+        // Unconditional, unlike the persist() above: hydratedRef already
+        // guarantees this async block only ever runs once per sign-in
+        // (guarded synchronously, before any await), so there's only ever
+        // one fetch to wait on — but the magic-link/PKCE exchange fires
+        // Supabase's auth-change callback more than once in quick succession
+        // as the session gets established (unlike a session injected
+        // directly into localStorage, which fires it once). Each firing
+        // re-runs this effect, tearing down the previous instance via the
+        // cleanup below and setting `cancelled` on it. Gating this on
+        // `!cancelled` meant the one instance actually holding the in-flight
+        // fetch would skip clearing `hydrating` when it resolved, leaving
+        // the app stuck on the loading screen forever — exactly what
+        // happened going through a real magic link, which none of tonight's
+        // earlier testing exercised (it injected a session pre-formed).
+        setHydrating(false);
       }
     })();
 
