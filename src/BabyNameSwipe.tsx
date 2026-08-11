@@ -3,6 +3,8 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from "react";
 import { useUpdateCheck } from "./lib/useUpdateCheck";
 import { GIRL_CORPUS, BOY_CORPUS, GIRL_CORE_SIZE, BOY_CORE_SIZE } from "./lib/nameCorpus";
+import { signInWithEmail, signOut, onAuthStateChange, getSession } from "./lib/auth";
+import { warmupBackend, getState, putSettings, postReset } from "./lib/api";
 
 /* ---------------- data ---------------- */
 
@@ -485,6 +487,8 @@ export default function BabyNameSwipe() {
   const updateAvailable = useUpdateCheck();
   const [who, setWho] = useState(0);
   const [view, setView] = useState("swipe");
+  const [session, setSession] = useState(null);
+  const [authChecking, setAuthChecking] = useState(true);
 
   const [deck, setDeck] = useState([]);
   const [i, setI] = useState(0);
@@ -513,6 +517,82 @@ export default function BabyNameSwipe() {
   }, [pool, who, ready]);
 
   useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  // T043: Fire warmup on app load, before sign-in, silently ignoring failure
+  useEffect(() => {
+    warmupBackend();
+  }, []);
+
+  // Auth state management: check for existing session and listen for changes
+  useEffect(() => {
+    let cancelled = false;
+
+    // Check for existing session
+    getSession().then((existingSession) => {
+      if (!cancelled) {
+        setSession(existingSession);
+        setAuthChecking(false);
+      }
+    });
+
+    // Listen for auth state changes
+    const unsubscribe = onAuthStateChange((newSession) => {
+      if (!cancelled) {
+        setSession(newSession);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  // T046: On successful sign-in, call GET /v1/state and hydrate the cache
+  useEffect(() => {
+    if (!session || !ready) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const accountState = await getState();
+        if (cancelled) return;
+
+        // Transform backend state to frontend cache shape
+        const hydratedState = {
+          people: [
+            {
+              label: accountState.swipers.find((s) => s.slot === 0)?.label || "Parent 1",
+              picks: {},
+            },
+            {
+              label: accountState.swipers.find((s) => s.slot === 1)?.label || "Partner",
+              picks: {},
+            },
+          ],
+          lastName: accountState.account.lastName || "",
+          genderFilter: accountState.account.genderFilter || "girl",
+          onboarded: accountState.account.onboarded || false,
+        };
+
+        // Convert picks array to picks object
+        for (const pick of accountState.picks) {
+          if (pick.slot >= 0 && pick.slot <= 1) {
+            hydratedState.people[pick.slot].picks[pick.name] = pick.verdict;
+          }
+        }
+
+        persist(hydratedState);
+      } catch (err) {
+        console.error("Failed to hydrate state from backend:", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session, ready, persist]);
 
   // Derived from picks rather than the pool: a name both parents kept must
   // stay listed even if it is no longer in the corpus. Insertion order = the
@@ -650,14 +730,16 @@ export default function BabyNameSwipe() {
       `}</style>
 
       <div style={{ width: "100%", maxWidth: 380, height: "100%", display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, overflowX: "hidden" }}>
-        {!ready || !state ? (
+        {authChecking || !ready || !state ? (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "rgba(22,32,43,0.7)" }}>
             Loading…
           </div>
+        ) : !session ? (
+          <SignIn />
         ) : !state.onboarded ? (
           <Welcome
-            onSubmit={(vals) => {
-              persist({
+            onSubmit={async (vals) => {
+              const newState = {
                 people: [
                   { label: vals.yourName || "Parent 1", picks: {} },
                   { label: vals.partnerName || "Partner", picks: {} },
@@ -665,7 +747,23 @@ export default function BabyNameSwipe() {
                 lastName: vals.lastName,
                 genderFilter: vals.genderFilter,
                 onboarded: true,
-              });
+              };
+              persist(newState);
+
+              // T044: Wire Welcome to persist via PUT /v1/settings
+              if (session) {
+                try {
+                  await putSettings({
+                    lastName: vals.lastName || "",
+                    genderFilter: vals.genderFilter || "girl",
+                    onboarded: true,
+                    swiper0Label: vals.yourName || "Parent 1",
+                    swiper1Label: vals.partnerName || "Partner",
+                  });
+                } catch (err) {
+                  console.error("Failed to sync settings to backend:", err);
+                }
+              }
             }}
           />
         ) : view === "settings" ? (
@@ -676,22 +774,47 @@ export default function BabyNameSwipe() {
               lastName: state.lastName || "",
               genderFilter: state.genderFilter || "girl",
             }}
-            onChange={(vals) => {
+            onChange={async (vals) => {
               const next = structuredClone(state);
               next.people[0].label = vals.yourName || "Parent 1";
               next.people[1].label = vals.partnerName || "Partner";
               next.lastName = vals.lastName;
               next.genderFilter = vals.genderFilter;
               persist(next);
+
+              // T044: Wire Welcome and Settings to persist via PUT /v1/settings
+              if (session) {
+                try {
+                  await putSettings({
+                    lastName: vals.lastName || "",
+                    genderFilter: vals.genderFilter || "girl",
+                    onboarded: true,
+                    swiper0Label: vals.yourName || "Parent 1",
+                    swiper1Label: vals.partnerName || "Partner",
+                  });
+                } catch (err) {
+                  console.error("Failed to sync settings to backend:", err);
+                }
+              }
             }}
             onBack={() => setView("swipe")}
-            onResetEverything={() => {
+            onResetEverything={async () => {
               if (
                 !window.confirm(
-                  "Reset everything on this device? This clears both swipers' picks, names, and settings — you'll see the welcome screen again."
+                  "Reset everything? This clears both the account and this device — both swipers' picks, names, and settings will be deleted everywhere."
                 )
               )
                 return;
+
+              // T045: Wire "RESET EVERYTHING ON THIS DEVICE" to POST /v1/reset
+              if (session) {
+                try {
+                  await postReset("everything");
+                } catch (err) {
+                  console.error("Failed to reset on backend:", err);
+                }
+              }
+
               persist({
                 people: [
                   { label: "", picks: {} },
@@ -844,8 +967,18 @@ export default function BabyNameSwipe() {
                       window.alert("That didn't look like a backup from this app.");
                     }
                   }}
-                  onReset={() => {
+                  onReset={async () => {
                     if (!window.confirm(`Clear all of ${label}'s picks?`)) return;
+
+                    // T045: Wire "START [NAME] OVER" to POST /v1/reset
+                    if (session) {
+                      try {
+                        await postReset("swiper", who);
+                      } catch (err) {
+                        console.error("Failed to reset swiper on backend:", err);
+                      }
+                    }
+
                     const next = structuredClone(state);
                     next.people[who].picks = {};
                     persist(next);
@@ -1168,6 +1301,109 @@ function ProfileActions({ canSubmit, submitLabel, onSubmit, onCancel }) {
       >
         {submitLabel}
       </button>
+    </div>
+  );
+}
+
+function SignIn() {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    if (!email.trim() || loading) return;
+    setLoading(true);
+    setError("");
+    const { error: err } = await signInWithEmail(email.trim());
+    setLoading(false);
+    if (err) {
+      setError("Failed to send magic link. Please try again.");
+    } else {
+      setSent(true);
+    }
+  };
+
+  return (
+    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 24 }}>
+      <div>
+        <div style={{ fontFamily: display, fontSize: 44, lineHeight: 1 }}>Baby Name Swipe</div>
+        <p style={{ fontSize: 13, opacity: 0.65, marginTop: 10, lineHeight: 1.6 }}>
+          Sign in to save your swipes across all your devices.
+        </p>
+      </div>
+
+      {sent ? (
+        <div style={{
+          padding: "16px",
+          borderRadius: 10,
+          background: "rgba(22, 121, 94, 0.1)",
+          border: "1px solid rgba(22, 121, 94, 0.3)",
+          fontSize: 13,
+          lineHeight: 1.6,
+          color: C.yes,
+        }}>
+          Check your email! We sent you a magic link to sign in.
+        </div>
+      ) : (
+        <>
+          <div style={{ position: "relative" }}>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+              placeholder="your@email.com"
+              disabled={loading}
+              style={{
+                width: "100%",
+                padding: "14px",
+                borderRadius: 10,
+                border: `1px solid ${error ? C.alert : "rgba(22,32,43,0.25)"}`,
+                background: "#fff",
+                color: C.ink,
+                fontFamily: ui,
+                fontSize: 16,
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          {error && (
+            <div style={{
+              padding: "12px 14px",
+              borderRadius: 10,
+              background: "rgba(168, 87, 75, 0.1)",
+              border: "1px solid rgba(168, 87, 75, 0.3)",
+              fontSize: 13,
+              color: C.alert,
+            }}>
+              {error}
+            </div>
+          )}
+
+          <button
+            onClick={handleSubmit}
+            disabled={!email.trim() || loading}
+            style={{
+              width: "100%",
+              padding: "12px",
+              borderRadius: 10,
+              border: "none",
+              background: !email.trim() || loading ? "rgba(22,32,43,0.3)" : C.ink,
+              color: "#fff",
+              fontFamily: ui,
+              fontWeight: 700,
+              fontSize: 13,
+              letterSpacing: "0.12em",
+              cursor: !email.trim() || loading ? "default" : "pointer",
+              opacity: !email.trim() || loading ? 0.5 : 1,
+            }}
+          >
+            {loading ? "SENDING..." : "SEND MAGIC LINK"}
+          </button>
+        </>
+      )}
     </div>
   );
 }

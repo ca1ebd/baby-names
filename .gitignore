@@ -33,3 +33,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+*.egg

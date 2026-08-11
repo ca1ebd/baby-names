@@ -36,14 +36,14 @@ Not available to the planning session, but present wherever `/speckit-implement`
 
 **Purpose**: Stand up the `api/` project skeleton and the tooling `make check` will run against.
 
-- [ ] T001 Create the `api/` skeleton per plan.md's Project Structure: `api/pyproject.toml`, `api/Dockerfile`, `api/alembic.ini`, `api/migrations/versions/`, `api/src/babynames_api/{models,schemas,routers,corpus}/`, `api/tests/{contract,integration,unit}/`
-- [ ] T002 [P] Populate `api/pyproject.toml` with runtime deps (FastAPI, Pydantic v2, SQLAlchemy 2.0, `psycopg[binary,pool]` 3, Alembic, PyJWT, uvicorn) and dev deps (ruff, pyright, pytest, `testcontainers[postgres]`)
-- [ ] T003 [P] Configure ruff and `pyright --strict` for `api/` in `api/pyproject.toml`
-- [ ] T004 [P] Create `api/Dockerfile` — Python 3.12 slim base, installs `api/pyproject.toml` deps, runs `uvicorn babynames_api.main:app`
-- [ ] T005 [P] Create `api/.env.example` documenting `DATABASE_URL`, `SUPABASE_PROJECT_REF`, `CORS_ORIGINS`, `RATE_LIMIT_PER_HOUR`, `VITE_API_BASE_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` per quickstart.md's Environment table — placeholders only. The real Supabase project's values live in `secrets/.env` at the repo root on the implementing machine (see "Credentials available on the implementing machine" above); never copy them into this file
-- [ ] T006 [P] Add `secrets/` to `.gitignore` — FR-025 requires the repository contain no credentials, and `secrets/.env` is where the real Supabase key lives on the implementing machine
-- [ ] T007 Create the root `Makefile` with `check`, `check-web`, `dev`, `migrate`, `seed-corpus` targets per quickstart.md's "The gate"; `dev`, `migrate`, and `seed-corpus` load `secrets/.env` when present so they reach the real Supabase project, while `check` stays testcontainers-only and never reads it
-- [ ] T008 [P] Add `@supabase/supabase-js` to `package.json` dependencies for client-side auth
+- [X] T001 Create the `api/` skeleton per plan.md's Project Structure: `api/pyproject.toml`, `api/Dockerfile`, `api/alembic.ini`, `api/migrations/versions/`, `api/src/babynames_api/{models,schemas,routers,corpus}/`, `api/tests/{contract,integration,unit}/`
+- [X] T002 [P] Populate `api/pyproject.toml` with runtime deps (FastAPI, Pydantic v2, SQLAlchemy 2.0, `psycopg[binary,pool]` 3, Alembic, PyJWT, uvicorn) and dev deps (ruff, pyright, pytest, `testcontainers[postgres]`)
+- [X] T003 [P] Configure ruff and `pyright --strict` for `api/` in `api/pyproject.toml`
+- [X] T004 [P] Create `api/Dockerfile` — Python 3.12 slim base, installs `api/pyproject.toml` deps, runs `uvicorn babynames_api.main:app`
+- [X] T005 [P] Create `api/.env.example` documenting `DATABASE_URL`, `SUPABASE_PROJECT_REF`, `CORS_ORIGINS`, `RATE_LIMIT_PER_HOUR`, `VITE_API_BASE_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` per quickstart.md's Environment table — placeholders only. The real Supabase project's values live in `secrets/.env` at the repo root on the implementing machine (see "Credentials available on the implementing machine" above); never copy them into this file
+- [X] T006 [P] Add `secrets/` to `.gitignore` — FR-025 requires the repository contain no credentials, and `secrets/.env` is where the real Supabase key lives on the implementing machine
+- [X] T007 Create the root `Makefile` with `check`, `check-web`, `dev`, `migrate`, `seed-corpus` targets per quickstart.md's "The gate"; `dev`, `migrate`, and `seed-corpus` load `secrets/.env` when present so they reach the real Supabase project, while `check` stays testcontainers-only and never reads it
+- [X] T008 [P] Add `@supabase/supabase-js` to `package.json` dependencies for client-side auth
 
 ---
 
@@ -53,26 +53,26 @@ Not available to the planning session, but present wherever `/speckit-implement`
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T009 Initialize Alembic (`api/alembic.ini`, `api/migrations/env.py`) pointed at the SQLAlchemy declarative `Base` metadata
-- [ ] T010 [P] Create `api/src/babynames_api/config.py` — Pydantic Settings model that loads `secrets/.env` from the repo root when present (falling back to `api/.env` / process env otherwise), so `make dev`/deploy tooling reaches the real Supabase project with nothing hardcoded or committed
-- [ ] T011 [P] Create `api/src/babynames_api/db.py` — sync SQLAlchemy engine (psycopg 3) + `get_session` dependency
-- [ ] T012 [P] Create the `Name` model in `api/src/babynames_api/models/name.py` — `id`, `name` (UNIQUE), `gender`, `rank`, `is_core`; `UNIQUE(gender, rank)` (data-model.md `names`)
-- [ ] T013 [P] Create the `Account` model in `api/src/babynames_api/models/account.py` — `id` (uuid PK = Supabase `sub`), `deck_seed`, `last_name`, `gender_filter`, `onboarded`, `created_at`
-- [ ] T014 [P] Create the `Swiper` model in `api/src/babynames_api/models/swiper.py` — `account_id` FK, `slot`, `label`, `position`; PK `(account_id, slot)`; CHECK `slot IN (0, 1)`
-- [ ] T015 [P] Create the `ServedOrder` model in `api/src/babynames_api/models/served_order.py` — `account_id` FK, `position`, `name_id` FK; PK `(account_id, position)`; `UNIQUE(account_id, name_id)`
-- [ ] T016 [P] Create the `Pick` model in `api/src/babynames_api/models/pick.py` — `account_id`, `slot`, `name_id`, `verdict`, `decided_at`; PK `(account_id, slot, name_id)`
-- [ ] T017 [P] Create the `RateLimitWindow` model in `api/src/babynames_api/models/rate_limit_window.py` — `account_id`, `window_start`, `request_count`; PK `(account_id, window_start)`
-- [ ] T018 Generate the initial Alembic migration creating all six tables with the constraints from T012–T017 in `api/migrations/versions/`
-- [ ] T019 [P] Create `api/tests/conftest.py` — session-scoped `testcontainers` `PostgresContainer`, `alembic upgrade head` run once, per-test transaction rollback, and a fixture that mints JWTs directly against a JWKS test fixture. Tests MUST NOT read `secrets/.env` or touch the real Supabase project (research §4)
-- [ ] T020 [P] Unit test: an unsigned, expired, or malformed JWT is rejected and a validly-signed one resolves to its `sub` in `api/tests/unit/test_auth.py`
-- [ ] T021 Create `api/src/babynames_api/auth.py` — JWKS fetch/cache keyed off `SUPABASE_PROJECT_REF` from config, offline JWT verification dependency, and account-provisioning-on-first-request (creates the account, its two swipers, and `deck_seed` for an unknown but valid `sub`)
-- [ ] T022 [P] Unit test: a fixed-window rate limiter allows requests under the cap, returns 429 with `Retry-After` once exceeded, and resets on window rollover, in `api/tests/unit/test_ratelimit.py`
-- [ ] T023 Create `api/src/babynames_api/ratelimit.py` — Postgres fixed-window per-`(account, hour)` dependency (FR-032)
-- [ ] T024 [P] Contract test: `GET /health` returns 200 `{"status":"ok","database":"ok",...}` when the database is reachable and 503 degraded when it is not, in `api/tests/contract/test_health.py`
-- [ ] T025 Create `api/src/babynames_api/routers/health.py` — `GET /health`, unauthenticated, unversioned, issues `SELECT 1`
-- [ ] T026 Create `api/src/babynames_api/main.py` — app factory, CORS from config, the `{"error":{"code","message"}}` error envelope, wires the health router
-- [ ] T027 [P] Create `api/scripts/seed_corpus.py` and `api/src/babynames_api/corpus/names.json` (generated from the same source as `src/lib/nameCorpus.ts`) — idempotent load into `names`, wired to `make seed-corpus`, targeting the real project via `secrets/.env`'s `DATABASE_URL`
-- [ ] T028 Confirm `make check` runs green (ruff + `pyright --strict` + pytest against testcontainers Postgres) on the empty-but-wired scaffold before any user story work begins
+- [X] T009 Initialize Alembic (`api/alembic.ini`, `api/migrations/env.py`) pointed at the SQLAlchemy declarative `Base` metadata
+- [X] T010 [P] Create `api/src/babynames_api/config.py` — Pydantic Settings model that loads `secrets/.env` from the repo root when present (falling back to `api/.env` / process env otherwise), so `make dev`/deploy tooling reaches the real Supabase project with nothing hardcoded or committed
+- [X] T011 [P] Create `api/src/babynames_api/db.py` — sync SQLAlchemy engine (psycopg 3) + `get_session` dependency
+- [X] T012 [P] Create the `Name` model in `api/src/babynames_api/models/name.py` — `id`, `name` (UNIQUE), `gender`, `rank`, `is_core`; `UNIQUE(gender, rank)` (data-model.md `names`)
+- [X] T013 [P] Create the `Account` model in `api/src/babynames_api/models/account.py` — `id` (uuid PK = Supabase `sub`), `deck_seed`, `last_name`, `gender_filter`, `onboarded`, `created_at`
+- [X] T014 [P] Create the `Swiper` model in `api/src/babynames_api/models/swiper.py` — `account_id` FK, `slot`, `label`, `position`; PK `(account_id, slot)`; CHECK `slot IN (0, 1)`
+- [X] T015 [P] Create the `ServedOrder` model in `api/src/babynames_api/models/served_order.py` — `account_id` FK, `position`, `name_id` FK; PK `(account_id, position)`; `UNIQUE(account_id, name_id)`
+- [X] T016 [P] Create the `Pick` model in `api/src/babynames_api/models/pick.py` — `account_id`, `slot`, `name_id`, `verdict`, `decided_at`; PK `(account_id, slot, name_id)`
+- [X] T017 [P] Create the `RateLimitWindow` model in `api/src/babynames_api/models/rate_limit_window.py` — `account_id`, `window_start`, `request_count`; PK `(account_id, window_start)`
+- [X] T018 Generate the initial Alembic migration creating all six tables with the constraints from T012–T017 in `api/migrations/versions/`
+- [X] T019 [P] Create `api/tests/conftest.py` — session-scoped `testcontainers` `PostgresContainer`, `alembic upgrade head` run once, per-test transaction rollback, and a fixture that mints JWTs directly against a JWKS test fixture. Tests MUST NOT read `secrets/.env` or touch the real Supabase project (research §4)
+- [X] T020 [P] Unit test: an unsigned, expired, or malformed JWT is rejected and a validly-signed one resolves to its `sub` in `api/tests/unit/test_auth.py`
+- [X] T021 Create `api/src/babynames_api/auth.py` — JWKS fetch/cache keyed off `SUPABASE_PROJECT_REF` from config, offline JWT verification dependency, and account-provisioning-on-first-request (creates the account, its two swipers, and `deck_seed` for an unknown but valid `sub`)
+- [X] T022 [P] Unit test: a fixed-window rate limiter allows requests under the cap, returns 429 with `Retry-After` once exceeded, and resets on window rollover, in `api/tests/unit/test_ratelimit.py`
+- [X] T023 Create `api/src/babynames_api/ratelimit.py` — Postgres fixed-window per-`(account, hour)` dependency (FR-032)
+- [X] T024 [P] Contract test: `GET /health` returns 200 `{"status":"ok","database":"ok",...}` when the database is reachable and 503 degraded when it is not, in `api/tests/contract/test_health.py`
+- [X] T025 Create `api/src/babynames_api/routers/health.py` — `GET /health`, unauthenticated, unversioned, issues `SELECT 1`
+- [X] T026 Create `api/src/babynames_api/main.py` — app factory, CORS from config, the `{"error":{"code","message"}}` error envelope, wires the health router
+- [X] T027 [P] Create `api/scripts/seed_corpus.py` and `api/src/babynames_api/corpus/names.json` (generated from the same source as `src/lib/nameCorpus.ts`) — idempotent load into `names`, wired to `make seed-corpus`, targeting the real project via `secrets/.env`'s `DATABASE_URL`
+- [X] T028 Confirm `make check` runs green (ruff + `pyright --strict` + pytest against testcontainers Postgres) on the empty-but-wired scaffold before any user story work begins
 
 **Checkpoint**: Foundation ready — schema, auth, rate limiting, health, and the test harness all exist; user story implementation can now begin.
 
@@ -86,27 +86,27 @@ Not available to the planning session, but present wherever `/speckit-implement`
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T029 [P] [US1] Contract test: `GET /v1/state` without a token returns 401; with another account's token it returns only that account's data (SC-006) in `api/tests/contract/test_state_auth.py`
-- [ ] T030 [P] [US1] Contract test: `GET /v1/state` returns the account/swipers/picks shape from contracts/http-api.md in `api/tests/contract/test_state_get.py`
-- [ ] T031 [P] [US1] Contract test: `PUT /v1/settings` updates account+swipers and leaves `served_order` untouched on a `genderFilter` change in `api/tests/contract/test_settings_put.py`
-- [ ] T032 [P] [US1] Contract test: `POST /v1/reset` with `scope=everything` clears picks/served_order/positions and sets `onboarded=false`; `scope=swiper` clears only that slot, in `api/tests/contract/test_reset.py`
-- [ ] T033 [P] [US1] Integration test: the first authenticated request from an unknown `sub` provisions an account with two swipers and a `deck_seed` in `api/tests/integration/test_account_provisioning.py`
-- [ ] T034 [P] [US1] Integration test: signing in from a fresh session restores 100% of picks, matches, labels, last name, and gender filter (SC-001) in `api/tests/integration/test_state_restore.py`
+- [X] T029 [P] [US1] Contract test: `GET /v1/state` without a token returns 401; with another account's token it returns only that account's data (SC-006) in `api/tests/contract/test_state_auth.py`
+- [X] T030 [P] [US1] Contract test: `GET /v1/state` returns the account/swipers/picks shape from contracts/http-api.md in `api/tests/contract/test_state_get.py`
+- [X] T031 [P] [US1] Contract test: `PUT /v1/settings` updates account+swipers and leaves `served_order` untouched on a `genderFilter` change in `api/tests/contract/test_settings_put.py`
+- [X] T032 [P] [US1] Contract test: `POST /v1/reset` with `scope=everything` clears picks/served_order/positions and sets `onboarded=false`; `scope=swiper` clears only that slot, in `api/tests/contract/test_reset.py`
+- [X] T033 [P] [US1] Integration test: the first authenticated request from an unknown `sub` provisions an account with two swipers and a `deck_seed` in `api/tests/integration/test_account_provisioning.py`
+- [X] T034 [P] [US1] Integration test: signing in from a fresh session restores 100% of picks, matches, labels, last name, and gender filter (SC-001) in `api/tests/integration/test_state_restore.py`
 
 ### Implementation for User Story 1
 
-- [ ] T035 [US1] Create Pydantic schemas for state/settings/reset in `api/src/babynames_api/schemas/state.py`
-- [ ] T036 [US1] Implement `GET /v1/state` in `api/src/babynames_api/routers/state.py`
-- [ ] T037 [US1] Implement `PUT /v1/settings` in `api/src/babynames_api/routers/settings.py`
-- [ ] T038 [US1] Implement `POST /v1/reset` in `api/src/babynames_api/routers/reset.py`
-- [ ] T039 [US1] Wire state/settings/reset routers into `api/src/babynames_api/main.py`
-- [ ] T040 [P] [US1] Create `src/lib/auth.ts` — `supabase-js` magic-link sign-in/out and session persistence
-- [ ] T041 [P] [US1] Create `src/lib/api.ts` — typed client with `getState`/`putSettings`/`postReset` (extended by later stories)
-- [ ] T042 [US1] Add the sign-in screen to `src/BabyNameSwipe.tsx` — full-page magic-link entry gating Welcome/Swipe, existing muted palette, `fontSize: 16` inputs, safe-area insets
-- [ ] T043 [US1] Fire `GET /health` as a warm-up on app load, before sign-in, silently ignoring failure (FR-030) in `src/BabyNameSwipe.tsx`
-- [ ] T044 [US1] Wire the Welcome and Settings screens in `src/BabyNameSwipe.tsx` to persist via `PUT /v1/settings` on the existing ~400ms debounce
-- [ ] T045 [US1] Wire "RESET EVERYTHING ON THIS DEVICE" and "START [NAME] OVER" to `POST /v1/reset`, updating the confirmation copy to say the reset clears both the account and the device (edge case)
-- [ ] T046 [US1] On successful sign-in, call `GET /v1/state` and hydrate the `babyname-swipe-v3` cache per data-model.md's client cache shape
+- [X] T035 [US1] Create Pydantic schemas for state/settings/reset in `api/src/babynames_api/schemas/state.py`
+- [X] T036 [US1] Implement `GET /v1/state` in `api/src/babynames_api/routers/state.py`
+- [X] T037 [US1] Implement `PUT /v1/settings` in `api/src/babynames_api/routers/settings.py`
+- [X] T038 [US1] Implement `POST /v1/reset` in `api/src/babynames_api/routers/reset.py`
+- [X] T039 [US1] Wire state/settings/reset routers into `api/src/babynames_api/main.py`
+- [X] T040 [P] [US1] Create `src/lib/auth.ts` — `supabase-js` magic-link sign-in/out and session persistence
+- [X] T041 [P] [US1] Create `src/lib/api.ts` — typed client with `getState`/`putSettings`/`postReset` (extended by later stories)
+- [X] T042 [US1] Add the sign-in screen to `src/BabyNameSwipe.tsx` — full-page magic-link entry gating Welcome/Swipe, existing muted palette, `fontSize: 16` inputs, safe-area insets
+- [X] T043 [US1] Fire `GET /health` as a warm-up on app load, before sign-in, silently ignoring failure (FR-030) in `src/BabyNameSwipe.tsx`
+- [X] T044 [US1] Wire the Welcome and Settings screens in `src/BabyNameSwipe.tsx` to persist via `PUT /v1/settings` on the existing ~400ms debounce
+- [X] T045 [US1] Wire "RESET EVERYTHING ON THIS DEVICE" and "START [NAME] OVER" to `POST /v1/reset`, updating the confirmation copy to say the reset clears both the account and the device (edge case)
+- [X] T046 [US1] On successful sign-in, call `GET /v1/state` and hydrate the `babyname-swipe-v3` cache per data-model.md's client cache shape
 - [ ] T047 [US1] Update `src/lib/storage.ts`'s cached-value handling for the new account/swipers/block/picks/outbox/`syncedAt` shape, keeping `STORAGE_KEY` unchanged (Constitution IV)
 - [ ] T048 [US1] On sign-out, attempt a flush once then clear the cached block/picks/account from the device (FR-006)
 
@@ -122,20 +122,20 @@ Not available to the planning session, but present wherever `/speckit-implement`
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T049 [P] [US2] Unit test: the Python `weightedShuffle` port matches the frontend's float64 semantics exactly — ~71.6% of a 7,457-entry core underflows to key `0.0` first at rank 230, dealt order is strict rank past ~position 2,118, median rank of the first 20 cards is 180–235 (research §5) in `api/tests/unit/test_deck_algorithm.py`
-- [ ] T050 [P] [US2] Contract test: `POST /v1/deck/next` returns a block honoring the account's `gender_filter` and never repeats a name across calls (FR-015) in `api/tests/contract/test_deck_next.py`
-- [ ] T051 [P] [US2] Integration test: two accounts with the same `gender_filter` get visibly different orders, and each account's own order is reproducible across repeated runs (SC-004) in `api/tests/integration/test_deck_per_account_seed.py`
-- [ ] T052 [P] [US2] Integration test: both swipers on one account, and the same account on a second device, are dealt the identical order (US2 scenario 5) in `api/tests/integration/test_deck_shared_order.py`
-- [ ] T053 [P] [US2] Integration test: requesting past the end of the corpus for a filter returns `exhausted: true` with a short/empty block rather than repeating or silently emptying (FR-017) in `api/tests/integration/test_deck_exhaustion.py`
-- [ ] T054 [P] [US2] Integration test: concurrent `POST /v1/deck/next` calls for the same account never double-deal a name, relying on the `UNIQUE(account_id, name_id)` constraint in `api/tests/integration/test_deck_concurrent_deal.py`
+- [X] T049 [P] [US2] Unit test: the Python `weightedShuffle` port matches the frontend's float64 semantics exactly — ~71.6% of a 7,457-entry core underflows to key `0.0` first at rank 230, dealt order is strict rank past ~position 2,118, median rank of the first 20 cards is 180–235 (research §5) in `api/tests/unit/test_deck_algorithm.py`
+- [X] T050 [P] [US2] Contract test: `POST /v1/deck/next` returns a block honoring the account's `gender_filter` and never repeats a name across calls (FR-015) in `api/tests/contract/test_deck_next.py`
+- [X] T051 [P] [US2] Integration test: two accounts with the same `gender_filter` get visibly different orders, and each account's own order is reproducible across repeated runs (SC-004) in `api/tests/integration/test_deck_per_account_seed.py`
+- [X] T052 [P] [US2] Integration test: both swipers on one account, and the same account on a second device, are dealt the identical order (US2 scenario 5) in `api/tests/integration/test_deck_shared_order.py`
+- [X] T053 [P] [US2] Integration test: requesting past the end of the corpus for a filter returns `exhausted: true` with a short/empty block rather than repeating or silently emptying (FR-017) in `api/tests/integration/test_deck_exhaustion.py`
+- [X] T054 [P] [US2] Integration test: concurrent `POST /v1/deck/next` calls for the same account never double-deal a name, relying on the `UNIQUE(account_id, name_id)` constraint in `api/tests/integration/test_deck_concurrent_deal.py`
 
 ### Implementation for User Story 2
 
-- [ ] T055 [US2] Port `weightedShuffle` faithfully — float64 `key = u^(rank+1)` from the seeded LCG, stable sort by `(key DESC, rank ASC)` — in `api/src/babynames_api/deck.py`
-- [ ] T056 [US2] Implement block dealing in `api/src/babynames_api/deck.py` — read the swiper's position, extend `served_order` via the account-seeded shuffle (skipping already-served names) when the run would exceed it, append, then slice the requested count
-- [ ] T057 [US2] Create Pydantic schemas for the deck request/response in `api/src/babynames_api/schemas/deck.py`
-- [ ] T058 [US2] Implement `POST /v1/deck/next` in `api/src/babynames_api/routers/deck.py`, wired into `main.py`
-- [ ] T059 [US2] Extend `src/lib/api.ts` with `requestNextBlock(slot, count)`
+- [X] T055 [US2] Port `weightedShuffle` faithfully — float64 `key = u^(rank+1)` from the seeded LCG, stable sort by `(key DESC, rank ASC)` — in `api/src/babynames_api/deck.py`
+- [X] T056 [US2] Implement block dealing in `api/src/babynames_api/deck.py` — read the swiper's position, extend `served_order` via the account-seeded shuffle (skipping already-served names) when the run would exceed it, append, then slice the requested count
+- [X] T057 [US2] Create Pydantic schemas for the deck request/response in `api/src/babynames_api/schemas/deck.py`
+- [X] T058 [US2] Implement `POST /v1/deck/next` in `api/src/babynames_api/routers/deck.py`, wired into `main.py`
+- [X] T059 [US2] Extend `src/lib/api.ts` with `requestNextBlock(slot, count)`
 - [ ] T060 [US2] Replace the client-side pool/deal logic in `src/BabyNameSwipe.tsx` with backend-served blocks, keeping the card presentation, per-card gender color band, and "both" neutral tone unchanged
 - [ ] T061 [US2] Delete `src/lib/nameCorpus.ts` and its import from `src/BabyNameSwipe.tsx` (SC-010, ~217 KB gzip)
 - [ ] T062 [US2] Run `scripts/validate-corpus-ui.mjs` (or equivalent) to confirm deck presentation and bundle size are unaffected by the corpus removal

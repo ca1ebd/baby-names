@@ -12,6 +12,7 @@
     "corpus:verify": "node scripts/verify-name-corpus.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.48.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
