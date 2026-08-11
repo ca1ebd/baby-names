@@ -575,7 +575,18 @@ export default function BabyNameSwipe() {
   const undoRef = useRef(null);
   useEffect(() => {
     const onKey = (e) => {
-      if (!state?.account?.onboarded || view !== "swipe") return;
+      // Never swallow a keystroke aimed at a text field, full stop — checked
+      // before any screen-state guard, not instead of one. This class of bug
+      // has already shipped twice: once as Backspace being eaten on Welcome's
+      // fields (fixed by adding an onboarded check to the old guard), and
+      // again here on the SignIn screen once auth introduced a new
+      // pre-swipe screen the guard didn't know to exclude. Enumerating
+      // "which screens count as swipe" is exactly the approach that keeps
+      // failing when a new screen is added — checking the event's actual
+      // target is what makes the next one structurally not a bug.
+      const tag = e.target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) return;
+      if (!session || !state?.account?.onboarded || view !== "swipe") return;
       if (e.key === "ArrowRight") decideRef.current?.("like");
       else if (e.key === "ArrowLeft") decideRef.current?.("pass");
       else if (e.key === "Backspace") {
@@ -585,7 +596,7 @@ export default function BabyNameSwipe() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [view, state?.account?.onboarded]);
+  }, [view, state?.account?.onboarded, session]);
 
   // T071: low-water-mark refill. Also what gets the very first cards after
   // sign-in, since GET /v1/state carries no deck — every swiper starts with
