@@ -16,6 +16,9 @@ dependencies = [
     "httpx>=0.28.0",
 ]
 
+[project.scripts]
+babynames-keepalive = "babynames_api.keepalive:main"
+
 [project.optional-dependencies]
 dev = [
     "ruff>=0.8.0",
