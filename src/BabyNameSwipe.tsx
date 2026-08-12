@@ -190,10 +190,12 @@ function useStore() {
   // never via a useEffect keyed on `state`. A passive effect only runs after
   // paint, so on rapid swipes (two decide() calls within the same tick) a
   // second call could read this ref before the first swipe's effect had run,
-  // see the pre-swipe block, and silently reprocess the *same* card the first
-  // swipe already removed — which is exactly what produced the "boomerang"
-  // bug reported 2026-08-12: a decided name reappearing at the top of the
-  // deck. Assigning it inline with every setState call closes that gap.
+  // see the pre-swipe block, and reprocess the card the first swipe already
+  // removed. Assigning it inline with every setState call closes that gap.
+  // (This is worth keeping, but note it was NOT the cause of the "boomerang"
+  // reported 2026-08-12 — that was purely a render-timing bug in the card
+  // stack, fixed at the `flying` card below. The picks written here were
+  // correct all along.)
   const stateRef = useRef(null);
 
   useEffect(() => {
@@ -471,6 +473,13 @@ export default function BabyNameSwipe() {
   const [hydrating, setHydrating] = useState(false);
 
   const [dx, setDx] = useState(0);
+  // null, or { dir, item, slot } for the card currently animating off screen.
+  // It has to carry the item, not just the direction: decide() removes the
+  // swiped card from the block synchronously (it must — the outbox write and
+  // the low-water-mark refill both key off that), so by the time the fly
+  // animation runs, the block no longer contains the card being flown. The
+  // stack is rendered from this card plus the block behind it, which keeps the
+  // swiped card on screen for exactly as long as it takes to leave.
   const [fly, setFly] = useState(null);
   const [history, setHistory] = useState([]);
   const [toast, setToast] = useState(null);
@@ -740,7 +749,7 @@ export default function BabyNameSwipe() {
         setTimeout(() => setToast(null), 2200);
       }
 
-      setFly(dir);
+      setFly({ dir, item, slot: who });
       timerRef.current = setTimeout(() => {
         setFly(null);
         setDx(0);
@@ -811,8 +820,18 @@ export default function BabyNameSwipe() {
       })
     : [];
 
-  // Card objects are built only for the handful of visible cards.
-  const visible = block.slice(0, 3).map((item) => ({ n: item.name, g: item.gender }));
+  // Card objects are built only for the handful of visible cards. A card in
+  // flight is still one of them — it sits on top of the block it was just
+  // removed from, so the card that animates away is the card that was swiped
+  // and the ones behind it never move. (Rendering the block alone here meant
+  // the *next* name inherited the top slot the instant the swipe landed, flew
+  // off in place of the swiped one, and then slid back to centre when the
+  // animation ended — the "boomerang" reported 2026-08-12.)
+  const flying = fly && fly.slot === who ? [fly.item] : [];
+  const visible = [...flying, ...block.slice(0, 3 - flying.length)].map((item) => ({
+    n: item.name,
+    g: item.gender,
+  }));
   const label = state?.swipers?.[who]?.label || "";
 
   const round = (bg, brd, size) => ({
@@ -1059,7 +1078,7 @@ export default function BabyNameSwipe() {
                           <Badge
                             item={item}
                             dx={d === 0 ? dx : 0}
-                            fly={d === 0 ? fly : null}
+                            fly={d === 0 && flying.length ? fly.dir : null}
                             depth={d}
                             lastName={state.account.lastName}
                             genderFilter={genderFilter}
