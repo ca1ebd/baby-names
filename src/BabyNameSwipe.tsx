@@ -186,6 +186,16 @@ function useStore() {
   const [ready, setReady] = useState(false);
   const [status, setStatus] = useState("loading"); // loading | saved | offline
 
+  // Mirrors `state`, updated synchronously wherever state is written below —
+  // never via a useEffect keyed on `state`. A passive effect only runs after
+  // paint, so on rapid swipes (two decide() calls within the same tick) a
+  // second call could read this ref before the first swipe's effect had run,
+  // see the pre-swipe block, and silently reprocess the *same* card the first
+  // swipe already removed — which is exactly what produced the "boomerang"
+  // bug reported 2026-08-12: a decided name reappearing at the top of the
+  // deck. Assigning it inline with every setState call closes that gap.
+  const stateRef = useRef(null);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -246,6 +256,7 @@ function useStore() {
         }
       }
       if (!cancelled) {
+        stateRef.current = loaded;
         setState(loaded);
         setStatus(ok ? "saved" : "offline");
         setReady(true);
@@ -257,6 +268,7 @@ function useStore() {
   }, []);
 
   const persist = useCallback(async (next) => {
+    stateRef.current = next;
     setState(next);
     try {
       const r = await window.storage.set(STORAGE_KEY, JSON.stringify(next), true);
@@ -272,13 +284,17 @@ function useStore() {
   const reload = useCallback(async () => {
     try {
       const r = await window.storage.get(STORAGE_KEY, true);
-      if (r) setState(JSON.parse(r.value));
+      if (r) {
+        const parsed = JSON.parse(r.value);
+        stateRef.current = parsed;
+        setState(parsed);
+      }
     } catch {
       // nothing cached yet, or storage unavailable — leave state as-is
     }
   }, []);
 
-  return { state, ready, persist, reload, status };
+  return { state, ready, persist, reload, status, stateRef };
 }
 
 /* ---------------- card ---------------- */
@@ -441,7 +457,7 @@ function Badge({ item, dx, fly, depth, lastName, genderFilter }) {
 /* ---------------- app ---------------- */
 
 export default function BabyNameSwipe() {
-  const { state, ready, persist, reload, status } = useStore();
+  const { state, ready, persist, reload, status, stateRef } = useStore();
   const updateAvailable = useUpdateCheck();
   const [who, setWho] = useState(0);
   const [view, setView] = useState("swipe");
@@ -463,14 +479,6 @@ export default function BabyNameSwipe() {
   const timerRef = useRef(null);
   const fetchingRef = useRef({});
   const hydratedRef = useRef(false);
-
-  // Mirrors `state` so async work (block fetch, flush) can merge against the
-  // latest value instead of a stale closure, without introducing a lost-update
-  // race — read this ref, then persist synchronously, no await in between.
-  const stateRef = useRef(state);
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
 
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
