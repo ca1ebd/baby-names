@@ -43,6 +43,19 @@ touches:
 - `unit/` — pure functions with no I/O (the deck algorithm, JWT verification,
   the rate limiter's math).
 
+**Every new table needs `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` in the
+migration that creates it.** The database is a Supabase project, which
+auto-exposes every `public`-schema table via PostgREST to anyone holding the
+project's anon key — and that key ships in the frontend's JS bundle, so it's
+not a secret. RLS is what keeps that path closed; the app itself never needs
+it, since the backend connects as the table-owning role and bypasses RLS
+regardless. No policies are needed either, for the same reason — enabling RLS
+with zero policies just default-denies every non-owner role.
+`tests/integration/test_row_level_security.py` runs the real Alembic chain
+against a scratch database and fails the build if any table comes out
+unprotected, so this isn't optional-and-easy-to-forget — `make check` won't
+go green without it.
+
 ## Other Makefile targets
 
 ```bash
