@@ -47,7 +47,6 @@ def test_every_table_has_row_level_security_enabled(postgres_container, monkeypa
                     "select relname from pg_class "
                     "where relnamespace = 'public'::regnamespace "
                     "and relkind = 'r' "
-                    "and relname != 'alembic_version' "
                     "and relrowsecurity = false"
                 )
             ).scalars().all()
